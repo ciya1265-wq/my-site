@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>三语种翻译器</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 960px;
+    margin: 30px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+#apiBar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+}
+#apiBar label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+}
+#apiSelect {
+    padding: 6px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+    min-width: 220px;
+}
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+.status-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.status-badge.status-ok { background: #e8f5e9; color: #2e7d32; }
+.status-badge.status-ok::before { background: #4caf50; box-shadow: 0 0 4px #4caf50; }
+.status-badge.status-fail { background: #ffebee; color: #c62828; }
+.status-badge.status-fail::before { background: #f44336; box-shadow: 0 0 4px #f44336; }
+.status-badge.status-testing { background: #fff3e0; color: #e65100; }
+.status-badge.status-testing::before { background: #ff9800; box-shadow: 0 0 4px #ff9800; }
+
+#inputContainer {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+textarea {
+    flex: 1;
+    height: 140px;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    resize: vertical;
+}
+button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #4CAF50;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+button:hover { background: #45a049; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+
+#detectedLang {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 15px;
+    padding: 4px 8px;
+    background: #f0f7ff;
+    border-radius: 6px;
+    display: inline-block;
+    min-height: 20px;
+}
+#detectedLang .lang-name {
+    color: #1976d2;
+    font-weight: bold;
+}
+
+#controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: flex-end;
+}
+.lang-select-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.lang-select-wrap label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #555;
+}
+.searchable-select {
+    position: relative;
+}
+.searchable-select input {
+    width: 150px;
+    padding: 6px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: text;
+    box-sizing: border-box;
+}
+.searchable-select input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
+}
+.searchable-select .dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 100;
+    margin-top: 2px;
+}
+.searchable-select .dropdown.open {
+    display: block;
+}
+.searchable-select .dropdown-item {
+    padding: 6px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.searchable-select .dropdown-item:hover,
+.searchable-select .dropdown-item.active {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.searchable-select .dropdown-item.selected {
+    background: #c8e6c9;
+    font-weight: bold;
+}
+.searchable-select .dropdown-empty {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #999;
+    text-align: center;
+}
+
+.translation-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+.translation-block {
+    background: #fdfdfd;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+}
+.translation-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.result-card {
+    height: 220px;              /* 固定高度 220px */
+    overflow-y: auto;          /* 内容过长时自动出现滑动条 */
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    white-space: pre-wrap;
+    cursor: text;
+    word-break: break-word;
+    background: #fff;
+}
+.result-card:hover { background: #f1f1f1; }
+
+/* 自定义滚动条样式 */
+.result-card::-webkit-scrollbar {
+    width: 6px;
+}
+.result-card::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+.result-card::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+.result-card::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>三语种翻译器</h2>
+
+<!-- 接口选择栏 -->
+<div id="apiBar">
+    <label>翻译接口:</label>
+    <select id="apiSelect"></select>
+    <span id="apiStatus" class="status-badge status-testing">检测中...</span>
+</div>
+
+<!-- 输入框 -->
+<div id="inputContainer">
+    <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
+    <button id="clearInput">清除</button>
+</div>
+
+<!-- 检测到的源语言显示 -->
+<div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
+
+<!-- 目标语言选择（可搜索） -->
+<div id="controls">
+    <div class="lang-select-wrap">
+        <label>目标语言1:</label>
+        <div class="searchable-select" data-target="targetLang1">
+            <input type="text" placeholder="输入搜索..." readonly>
+            <div class="dropdown"></div>
+            <input type="hidden" id="targetLang1" value="zh-CN">
+        </div>
+    </div>
+    <div class="lang-select-wrap">
+        <label>目标语言2:</label>
+        <div class="searchable-select" data-target="targetLang2">
+            <input type="text" placeholder="输入搜索..." readonly>
+            <div class="dropdown"></div>
+            <input type="hidden" id="targetLang2" value="en">
+        </div>
+    </div>
+    <div class="lang-select-wrap">
+        <label>目标语言3:</label>
+        <div class="searchable-select" data-target="targetLang3">
+            <input type="text" placeholder="输入搜索..." readonly>
+            <div class="dropdown"></div>
+            <input type="hidden" id="targetLang3" value="de">
+        </div>
+    </div>
+</div>
+
+<div class="translation-grid" id="results">
+    <div class="translation-block">
+        <div class="translation-header">
+            <button class="translate-btn" data-index="0">翻译</button>
+            <button class="copy-btn" data-index="0">复制</button>
+        </div>
+        <div id="result1" class="result-card" contenteditable="true"></div>
+    </div>
+    <div class="translation-block">
+        <div class="translation-header">
+            <button class="translate-btn" data-index="1">翻译</button>
+            <button class="copy-btn" data-index="1">复制</button>
+        </div>
+        <div id="result2" class="result-card" contenteditable="true"></div>
+    </div>
+    <div class="translation-block">
+        <div class="translation-header">
+            <button class="translate-btn" data-index="2">翻译</button>
+            <button class="copy-btn" data-index="2">复制</button>
+        </div>
+        <div id="result3" class="result-card" contenteditable="true"></div>
+    </div>
+</div>
+</div>
+
+<script>
+// 语言列表
+const languages = {
+    "af":"南非荷兰语","sq":"阿尔巴尼亚语","am":"阿姆哈拉语","ar":"阿拉伯语",
+    "hy":"亚美尼亚语","az":"阿塞拜疆语","eu":"巴斯克语","be":"白俄罗斯语",
+    "bn":"孟加拉语","bs":"波斯尼亚语","bg":"保加利亚语","ca":"加泰罗尼亚语",
+    "ceb":"宿务语","ny":"尼扬贾语","zh-CN":"中文（简体）","zh-TW":"中文（繁体）",
+    "co":"科西嘉语","hr":"克罗地亚语","cs":"捷克语","da":"丹麦语",
+    "nl":"荷兰语","en":"英语","eo":"世界语","et":"爱沙尼亚语",
+    "tl":"菲律宾语","fi":"芬兰语","fr":"法语","fy":"弗里西亚语",
+    "gl":"加利西亚语","ka":"格鲁吉亚语","de":"德语","el":"希腊语",
+    "gu":"古吉拉特语","ht":"海地克里奥尔语","ha":"豪萨语","haw":"夏威夷语",
+    "he":"希伯来语","hi":"印地语","hmn":"苗语","hu":"匈牙利语",
+    "is":"冰岛语","ig":"伊博语","id":"印尼语","ga":"爱尔兰语",
+    "it":"意大利语","ja":"日语","jw":"爪哇语","kn":"卡纳达语",
+    "kk":"哈萨克语","km":"高棉语","rw":"卢旺达语","ko":"韩语",
+    "ku":"库尔德语（库尔曼吉）","ky":"吉尔吉斯语","lo":"老挝语","la":"拉丁语",
+    "lv":"拉脱维亚语","lt":"立陶宛语","lb":"卢森堡语","mk":"马其顿语",
+    "mg":"马尔加什语","ms":"马来语","ml":"马拉雅拉姆语","mt":"马耳他语",
+    "mi":"毛利语","mr":"马拉地语","mn":"蒙古语","my":"缅甸语",
+    "ne":"尼泊尔语","no":"挪威语","or":"奥里亚语","ps":"普什图语",
+    "fa":"波斯语","pl":"波兰语","pt":"葡萄牙语","pa":"旁遮普语",
+    "ro":"罗马尼亚语","ru":"俄语","sm":"萨摩亚语","gd":"苏格兰盖尔语",
+    "sr":"塞尔维亚语","st":"塞索托语","sn":"绍纳语","sd":"信德语",
+    "si":"僧伽罗语","sk":"斯洛伐克语","sl":"斯洛文尼亚语","so":"索马里语",
+    "es":"西班牙语","su":"巽他语","sw":"斯瓦希里语","sv":"瑞典语",
+    "tg":"塔吉克语","ta":"泰米尔语","tt":"鞑靼语","te":"泰卢固语",
+    "th":"泰语","tr":"土耳其语","tk":"土库曼语","uk":"乌克兰语",
+    "ur":"乌尔都语","ug":"维吾尔语","uz":"乌兹别克语","vi":"越南语",
+    "cy":"威尔士语","xh":"科萨语","yi":"意第绪语","yo":"约鲁巴语","zu":"祖鲁语"
+};
+const sortedLangs = Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1]));
+
+// ========== 备用翻译接口配置 ==========
+const apiEndpoints = {
+    googleapis: {
+        name: '接口1: translate.googleapis.com',
+        build: (text, lang) => `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
+        parse: (data) => data[0].map(item => item[0]).join(''),
+        detectLang: (data) => data[2] || null
+    },
+    googleapis_alt: {
+        name: '接口2: translate.googleapis.com (备用参数)',
+        build: (text, lang) => `https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=auto&tl=${lang}&q=${encodeURIComponent(text)}`,
+        parse: (data) => data[0].map(item => item[0]).join(''),
+        detectLang: (data) => data[2] || null
+    },
+    googlecn: {
+        name: '接口3: translate.google.cn',
+        build: (text, lang) => `https://translate.google.cn/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
+        parse: (data) => data[0].map(item => item[0]).join(''),
+        detectLang: (data) => data[2] || null
+    },
+    googlecom: {
+        name: '接口4: translate.google.com',
+        build: (text, lang) => `https://translate.google.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
+        parse: (data) => data[0].map(item => item[0]).join(''),
+        detectLang: (data) => data[2] || null
+    },
+    googleapis_dict: {
+        name: '接口5: translate.googleapis.com (词典模式)',
+        build: (text, lang) => `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&dt=bd&dj=1&q=${encodeURIComponent(text)}`,
+        parse: (data) => {
+            if (data.sentences) return data.sentences.map(s => s.trans).join('');
+            return data[0].map(item => item[0]).join('');
+        },
+        detectLang: (data) => data.src || null
+    },
+    googlecom_dict: {
+        name: '接口6: translate.google.com (词典模式)',
+        build: (text, lang) => `https://translate.google.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&dt=bd&dj=1&q=${encodeURIComponent(text)}`,
+        parse: (data) => {
+            if (data.sentences) return data.sentences.map(s => s.trans).join('');
+            return data[0].map(item => item[0]).join('');
+        },
+        detectLang: (data) => data.src || null
+    }
+};
+
+let currentApi = 'googleapis';
+let lastDetectedLang = '';
+
+// 初始化接口下拉框
+function initApiSelect() {
+    const select = document.getElementById('apiSelect');
+    Object.entries(apiEndpoints).forEach(([key, cfg]) => {
+        select.add(new Option(cfg.name, key));
+    });
+    select.value = currentApi;
+}
+initApiSelect();
+
+// ========== 可搜索语言选择框 ==========
+function initSearchableSelects() {
+    document.querySelectorAll('.searchable-select').forEach(wrap => {
+        const input = wrap.querySelector('input[type="text"]');
+        const hidden = wrap.querySelector('input[type="hidden"]');
+        const dropdown = wrap.querySelector('.dropdown');
+
+        const setDisplay = (code) => {
+            const name = languages[code] || code;
+            input.value = name;
+            hidden.value = code;
+        };
+        setDisplay(hidden.value);
+
+        const renderDropdown = (filter = '') => {
+            const filterLower = filter.toLowerCase();
+            const filtered = sortedLangs.filter(([code, name]) =>
+                name.toLowerCase().includes(filterLower) || code.toLowerCase().includes(filterLower)
+            );
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div class="dropdown-empty">无匹配语言</div>';
+            } else {
+                dropdown.innerHTML = filtered.map(([code, name]) =>
+                    `<div class="dropdown-item${code === hidden.value ? ' selected' : ''}" data-code="${code}">${name}</div>`
+                ).join('');
+            }
+        };
+
+        const openDropdown = () => {
+            renderDropdown(input.value === languages[hidden.value] ? '' : input.value);
+            dropdown.classList.add('open');
+            input.select();
+        };
+
+        const closeDropdown = () => {
+            dropdown.classList.remove('open');
+            input.value = languages[hidden.value] || hidden.value;
+        };
+
+        input.addEventListener('focus', openDropdown);
+        input.addEventListener('click', openDropdown);
+
+        input.addEventListener('input', () => {
+            if (!dropdown.classList.contains('open')) {
+                dropdown.classList.add('open');
+            }
+            renderDropdown(input.value);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            const items = dropdown.querySelectorAll('.dropdown-item');
+            const active = dropdown.querySelector('.dropdown-item.active');
+            let idx = Array.from(items).indexOf(active);
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                idx = idx < items.length - 1 ? idx + 1 : 0;
+                items.forEach(i => i.classList.remove('active'));
+                if (items[idx]) { items[idx].classList.add('active'); items[idx].scrollIntoView({ block: 'nearest' }); }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                idx = idx > 0 ? idx - 1 : items.length - 1;
+                items.forEach(i => i.classList.remove('active'));
+                if (items[idx]) { items[idx].classList.add('active'); items[idx].scrollIntoView({ block: 'nearest' }); }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (active) {
+                    active.click();
+                } else if (items.length > 0) {
+                    items[0].click();
+                }
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+                input.blur();
+            }
+        });
+
+        dropdown.addEventListener('click', (e) => {
+            const item = e.target.closest('.dropdown-item');
+            if (!item) return;
+            const code = item.dataset.code;
+            hidden.value = code;
+            input.value = languages[code] || code;
+            dropdown.classList.remove('open');
+            translateText();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!wrap.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+    });
+}
+initSearchableSelects();
+
+// 更新接口状态显示
+function setApiStatus(status) {
+    const el = document.getElementById('apiStatus');
+    el.className = 'status-badge';
+    if (status === 'ok') {
+        el.classList.add('status-ok');
+        el.textContent = '正常';
+    } else if (status === 'fail') {
+        el.classList.add('status-fail');
+        el.textContent = '失败';
+    } else {
+        el.classList.add('status-testing');
+        el.textContent = '检测中...';
+    }
+}
+
+// 显示检测到的源语言
+function setDetectedLang(code) {
+    const el = document.getElementById('detectedLang');
+    if (!code) {
+        el.innerHTML = '检测到语言：<span class="lang-name">—</span>';
+        return;
+    }
+    const name = languages[code] || code;
+    el.innerHTML = `检测到语言：<span class="lang-name">${name}</span> (${code})`;
+}
+
+// 检测当前接口是否可用
+async function testApi() {
+    setApiStatus('testing');
+    const api = apiEndpoints[currentApi];
+    if (!api) { setApiStatus('fail'); return false; }
+
+    const url = api.build('hello', 'zh-CN');
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (!res.ok) { setApiStatus('fail'); return false; }
+
+        const data = await res.json();
+        const result = api.parse(data);
+        const ok = result && result.length > 0 && result !== '翻译失败';
+        setApiStatus(ok ? 'ok' : 'fail');
+        return ok;
+    } catch (e) {
+        console.error('接口检测失败:', e);
+        setApiStatus('fail');
+        return false;
+    }
+}
+
+// 翻译请求（使用当前接口）
+async function translateTo(text, targetLang){
+    const api = apiEndpoints[currentApi];
+    if (!api) return '翻译失败';
+
+    const url = api.build(text, targetLang);
+    try {
+        const res = await fetch(url);
+        if (!res.ok) {
+            setApiStatus('fail');
+            return '翻译失败';
+        }
+        const data = await res.json();
+        const result = api.parse(data);
+        if (api.detectLang) {
+            const detected = api.detectLang(data);
+            if (detected && detected !== lastDetectedLang) {
+                lastDetectedLang = detected;
+                setDetectedLang(detected);
+            }
+        }
+        setApiStatus('ok');
+        return result || '翻译失败';
+    } catch(e) {
+        console.error('翻译请求失败:', e);
+        setApiStatus('fail');
+        return '翻译失败';
+    }
+}
+
+// 防抖
+function debounce(fn,delay){let timer=null; return function(...args){clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args),delay);}}
+
+// 实时翻译
+const translateText = debounce(async ()=>{
+    const text = document.getElementById('inputText').value.trim();
+    ['result1','result2','result3'].forEach((id,i)=>document.getElementById(id).innerText=text?'翻译中...':'');
+    if(!text) {
+        setDetectedLang('');
+        lastDetectedLang = '';
+        return;
+    }
+
+    const langs=['targetLang1','targetLang2','targetLang3'].map(id=>document.getElementById(id).value);
+    const results = await Promise.all(langs.map(l=>translateTo(text,l)));
+    ['result1','result2','result3'].forEach((id,i)=>document.getElementById(id).innerText=results[i]);
+},500);
+
+// 接口切换
+document.getElementById('apiSelect').addEventListener('change', async function() {
+    currentApi = this.value;
+    await testApi();
+    if (document.getElementById('inputText').value.trim()) {
+        translateText();
+    }
+});
+
+// 事件绑定
+document.getElementById('inputText').addEventListener('input',translateText);
+document.getElementById('clearInput').addEventListener('click',()=>{
+    document.getElementById('inputText').value='';
+    translateText();
+});
+
+// 单独翻译
+document.querySelectorAll('.translate-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+        const idx=parseInt(btn.dataset.index);
+        const text=document.getElementById('inputText').value.trim();
+        if(!text) return;
+        const lang=document.getElementById(['targetLang1','targetLang2','targetLang3'][idx]).value;
+        const result=await translateTo(text,lang);
+        document.getElementById(['result1','result2','result3'][idx]).innerText=result;
+    });
+});
+
+// 单独复制
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+        const idx=parseInt(btn.dataset.index);
+        const text=document.getElementById(['result1','result2','result3'][idx]).innerText;
+        navigator.clipboard.writeText(text);
+    });
+});
+
+// 页面加载时检测接口
+testApi();
+</script>
+</body>
+</html>
