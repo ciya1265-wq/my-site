@@ -2,42 +2,361 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>三语种翻译器</title>
+<title>多功能工具箱</title>
 <style>
 body {
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     background: #f0f2f5;
     margin: 0;
     padding: 0;
+    color: #333;
 }
 .container {
     max-width: 960px;
-    margin: 30px auto;
-    padding: 20px;
+    margin: 20px auto;
+    padding: 16px 20px;
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 h2 {
     text-align: center;
-    margin-bottom: 20px;
+    margin: 0 0 12px 0;
+    font-size: 20px;
 }
+
+/* ========== 标签导航栏 ========== */
+#tabBar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.tab-btn {
+    padding: 6px 18px;
+    border: 1px solid #e0e0e0;
+    border-radius: 22px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+.tab-btn:hover {
+    background: #f0f7ff;
+    border-color: #90caf9;
+}
+.tab-btn.active {
+    background: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+    box-shadow: 0 2px 6px rgba(25,118,210,0.3);
+}
+
+/* ========== 标签内容区 ========== */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ========== 通用面板卡片 ========== */
+.panel-box {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    min-height: 300px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.panel-header h3 { margin: 0; font-size: 18px; color: #222; }
+.panel-header .hint { font-size: 13px; color: #999; }
+
+/* ========== 货币换算面板 ========== */
+.currency-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.currency-card {
+    flex: 1;
+    min-width: 220px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s;
+    position: relative;
+}
+.currency-card:hover { border-color: #90caf9; }
+.currency-card .flag {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e3f2fd;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+.currency-card .info { flex: 1; position: relative; }
+.currency-card .search-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    background: transparent;
+    cursor: text;
+    font-weight: bold;
+    color: #222;
+    padding: 0;
+    box-sizing: border-box;
+}
+.currency-card .search-input::placeholder { color: #bbb; font-weight: normal; }
+.currency-card .currency-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    z-index: 200;
+    margin-top: 6px;
+}
+.currency-card .currency-dropdown.open { display: block; }
+.currency-card .currency-dropdown-item {
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.currency-card .currency-dropdown-item:hover,
+.currency-card .currency-dropdown-item.active { background: #f0f7ff; }
+.currency-card .currency-dropdown-item.selected { background: #e3f2fd; font-weight: bold; color: #1976d2; }
+.currency-card .currency-dropdown-item .mini-flag {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #e3f2fd;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+.currency-card .currency-dropdown-item .mini-info { flex: 1; overflow: hidden; }
+.currency-card .currency-dropdown-item .mini-code { font-size: 14px; color: #222; }
+.currency-card .currency-dropdown-item .mini-name {
+    font-size: 12px;
+    color: #999;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.currency-card .currency-dropdown-empty { padding: 12px; text-align: center; color: #999; font-size: 13px; }
+
+.swap-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.swap-btn:hover { background: #f0f7ff; border-color: #90caf9; }
+
+.amount-label { font-size: 13px; color: #666; margin-bottom: 6px; }
+.amount-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 22px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+.amount-input:focus { border-color: #1976d2; box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+.amount-input::placeholder { color: #bbb; font-size: 18px; }
+
+.result-box {
+    margin-top: 16px;
+    padding: 18px 20px;
+    background: #e8f0fe;
+    border-radius: 12px;
+    border: 1px solid #d2e3fc;
+}
+.result-box .main { font-size: 24px; font-weight: bold; color: #174ea6; }
+.result-box .sub { font-size: 13px; color: #5f6368; margin-top: 6px; }
+
+.rate-status {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #666;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.rate-status .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4caf50;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.common-rates-title { font-size: 14px; color: #666; margin: 20px 0 10px; }
+.common-rates {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+.rate-card {
+    padding: 14px 16px;
+    background: #fafafa;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+.rate-card:hover { background: #f0f7ff; border-color: #90caf9; }
+.rate-card .pair { font-size: 13px; color: #999; margin-bottom: 6px; }
+.rate-card .value { font-size: 16px; font-weight: bold; color: #222; }
+.rate-card .reverse { font-size: 12px; color: #999; margin-top: 4px; }
+.rate-card .arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #bbb;
+    font-size: 18px;
+}
+
+/* ========== 二维码面板 ========== */
+.qr-input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.qr-input-row input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    font-size: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.qr-input-row input:focus { border-color: #1976d2; box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
+.qr-input-row button {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 10px;
+    background: #1976d2;
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.qr-input-row button:hover { background: #1565c0; }
+
+.qr-display {
+    min-height: 320px;
+    border: 1px dashed #ddd;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    padding: 20px;
+    flex-direction: column;
+    gap: 16px;
+}
+.qr-display .placeholder { color: #bbb; font-size: 14px; }
+.qr-display img {
+    max-width: 240px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px;
+}
+
+.qr-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.qr-footer .btn-group { display: flex; gap: 10px; }
+.qr-footer .clear-btn {
+    padding: 8px 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    font-size: 14px;
+}
+.qr-footer .clear-btn:hover { background: #f5f5f5; }
+.qr-footer .download-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    background: #1976d2;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+.qr-footer .download-btn:hover { background: #1565c0; }
+.qr-footer .download-btn:disabled { background: #bbb; cursor: not-allowed; }
+.qr-footer .tip { font-size: 12px; color: #999; }
+
+/* ========== 翻译面板 ========== */
 #apiBar {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 15px;
-    padding: 10px 15px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
     background: #f8f9fa;
     border-radius: 8px;
     border: 1px solid #e0e0e0;
     flex-wrap: wrap;
 }
-#apiBar label {
-    font-size: 14px;
-    font-weight: bold;
-    color: #333;
-}
+#apiBar label { font-size: 14px; font-weight: bold; color: #333; }
 #apiSelect {
     padding: 6px 10px;
     font-size: 14px;
@@ -71,14 +390,10 @@ h2 {
 .status-badge.status-testing { background: #fff3e0; color: #e65100; }
 .status-badge.status-testing::before { background: #ff9800; box-shadow: 0 0 4px #ff9800; }
 
-#inputContainer {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 8px;
-}
+#inputContainer { display: flex; gap: 10px; margin-bottom: 6px; }
 textarea {
     flex: 1;
-    height: 140px;
+    height: 110px;
     padding: 12px;
     font-size: 16px;
     border-radius: 8px;
@@ -100,23 +415,20 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 #detectedLang {
     font-size: 13px;
     color: #666;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     padding: 4px 8px;
     background: #f0f7ff;
     border-radius: 6px;
     display: inline-block;
     min-height: 20px;
 }
-#detectedLang .lang-name {
-    color: #1976d2;
-    font-weight: bold;
-}
+#detectedLang .lang-name { color: #1976d2; font-weight: bold; }
 
 #controls {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     align-items: flex-end;
 }
 .lang-select-wrap {
@@ -125,17 +437,11 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     flex-direction: column;
     gap: 4px;
 }
-.lang-select-wrap label {
-    font-size: 13px;
-    font-weight: bold;
-    color: #555;
-}
-.searchable-select {
-    position: relative;
-}
+.lang-select-wrap label { font-size: 13px; font-weight: bold; color: #555; }
+.searchable-select { position: relative; }
 .searchable-select input {
-    width: 150px;
-    padding: 6px 10px;
+    width: 100%;
+    padding: 8px 10px;
     font-size: 14px;
     border-radius: 6px;
     border: 1px solid #ccc;
@@ -163,9 +469,7 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     z-index: 100;
     margin-top: 2px;
 }
-.searchable-select .dropdown.open {
-    display: block;
-}
+.searchable-select .dropdown.open { display: block; }
 .searchable-select .dropdown-item {
     padding: 6px 10px;
     font-size: 14px;
@@ -175,20 +479,9 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     text-overflow: ellipsis;
 }
 .searchable-select .dropdown-item:hover,
-.searchable-select .dropdown-item.active {
-    background: #e8f5e9;
-    color: #2e7d32;
-}
-.searchable-select .dropdown-item.selected {
-    background: #c8e6c9;
-    font-weight: bold;
-}
-.searchable-select .dropdown-empty {
-    padding: 8px 10px;
-    font-size: 13px;
-    color: #999;
-    text-align: center;
-}
+.searchable-select .dropdown-item.active { background: #e8f5e9; color: #2e7d32; }
+.searchable-select .dropdown-item.selected { background: #c8e6c9; font-weight: bold; }
+.searchable-select .dropdown-empty { padding: 8px 10px; font-size: 13px; color: #999; text-align: center; }
 
 .translation-grid {
     display: grid;
@@ -203,14 +496,10 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     display: flex;
     flex-direction: column;
 }
-.translation-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-}
+.translation-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
 .result-card {
-    height: 220px;              /* 固定高度 220px */
-    overflow-y: auto;          /* 内容过长时自动出现滑动条 */
+    height: 220px;
+    overflow-y: auto;
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 6px;
@@ -220,99 +509,406 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     background: #fff;
 }
 .result-card:hover { background: #f1f1f1; }
+.result-card::-webkit-scrollbar { width: 6px; }
+.result-card::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+.result-card::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.result-card::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-/* 自定义滚动条样式 */
-.result-card::-webkit-scrollbar {
-    width: 6px;
+/* ========== 笔记面板 ========== */
+#notePanel {
+    display: flex;
+    height: 640px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
 }
-.result-card::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
+.note-sidebar {
+    width: 220px;
+    min-width: 150px;
+    max-width: 400px;
+    resize: horizontal;
+    overflow: auto;
+    background: #fafafa;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
 }
-.result-card::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
+.note-sidebar-header {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
-.result-card::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+.note-sidebar-header button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #4a90e2;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
 }
+.note-sidebar-header button:hover { background: #3a7bc8; }
+.note-sidebar-header button.export { background: #4caf50; }
+.note-sidebar-header button.export:hover { background: #43a047; }
+.note-sidebar-header button.import { background: #ff9800; }
+.note-sidebar-header button.import:hover { background: #f57c00; }
+
+#noteList { flex: 1; overflow: auto; }
+.note-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+}
+.note-item:hover { background: #f0f0f0; }
+.note-item.active { background: #e6f0ff; }
+
+.note-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.note-toolbar {
+    padding: 6px 10px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+.note-toolbar .toolbar-group {
+    display: flex;
+    gap: 2px;
+    padding: 0 6px;
+    border-right: 1px solid #ddd;
+    align-items: center;
+}
+.note-toolbar .toolbar-group:last-child { border-right: none; }
+.note-toolbar button,
+.note-toolbar select {
+    padding: 5px 8px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    transition: background 0.15s;
+}
+.note-toolbar button:hover,
+.note-toolbar select:hover { background: #e0e0e0; }
+.note-toolbar button.active { background: #d0e0ff; color: #1976d2; }
+.note-toolbar input[type="color"] {
+    width: 32px;
+    height: 28px;
+    padding: 2px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+.note-toolbar .divider {
+    width: 1px;
+    height: 20px;
+    background: #ddd;
+    margin: 0 2px;
+}
+
+#noteEditor {
+    flex: 1;
+    overflow: auto;
+    padding: 25px;
+    background: #fff;
+    outline: none;
+    line-height: 1.6;
+    font-size: 15px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+}
+#noteEditor img {
+    max-width: 100%;
+    margin: 10px 0;
+    border-radius: 8px;
+    display: block;
+}
+#noteEditor table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+#noteEditor td, #noteEditor th { border: 1px solid #ccc; padding: 8px; }
+#noteEditor blockquote {
+    border-left: 4px solid #ccc;
+    margin: 10px 0;
+    padding: 10px;
+    background: #f8f8f8;
+}
+#noteEditor pre {
+    background: #f4f4f4;
+    padding: 12px;
+    border-radius: 8px;
+    overflow: auto;
+}
+#noteEditor a { color: #2563eb; text-decoration: underline; }
+
+#noteStatus {
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #4caf50;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    text-align: right;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#noteStatus .left { color: #999; }
 </style>
 </head>
 <body>
 <div class="container">
-<h2>三语种翻译器</h2>
+<h2>多功能工具箱</h2>
 
-<!-- 接口选择栏 -->
-<div id="apiBar">
-    <label>翻译接口:</label>
-    <select id="apiSelect"></select>
-    <span id="apiStatus" class="status-badge status-testing">检测中...</span>
+<div id="tabBar">
+    <button class="tab-btn active" data-tab="tab-translate">翻译</button>
+    <button class="tab-btn" data-tab="tab-currency">货币换算</button>
+    <button class="tab-btn" data-tab="tab-qrcode">二维码</button>
+    <button class="tab-btn" data-tab="tab-note">笔记</button>
 </div>
 
-<!-- 输入框 -->
-<div id="inputContainer">
-    <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
-    <button id="clearInput">清除</button>
+<!-- 翻译面板 -->
+<div id="tab-translate" class="tab-panel active">
+    <div id="apiBar">
+        <label>翻译接口:</label>
+        <select id="apiSelect"></select>
+        <span id="apiStatus" class="status-badge status-testing">检测中...</span>
+    </div>
+    <div id="inputContainer">
+        <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
+        <button id="clearInput">清除</button>
+    </div>
+    <div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
+    <div id="controls">
+        <div class="lang-select-wrap">
+            <label>目标语言1:</label>
+            <div class="searchable-select" data-target="targetLang1">
+                <input type="text" placeholder="输入搜索..." readonly>
+                <div class="dropdown"></div>
+                <input type="hidden" id="targetLang1" value="zh-CN">
+            </div>
+        </div>
+        <div class="lang-select-wrap">
+            <label>目标语言2:</label>
+            <div class="searchable-select" data-target="targetLang2">
+                <input type="text" placeholder="输入搜索..." readonly>
+                <div class="dropdown"></div>
+                <input type="hidden" id="targetLang2" value="en">
+            </div>
+        </div>
+        <div class="lang-select-wrap">
+            <label>目标语言3:</label>
+            <div class="searchable-select" data-target="targetLang3">
+                <input type="text" placeholder="输入搜索..." readonly>
+                <div class="dropdown"></div>
+                <input type="hidden" id="targetLang3" value="de">
+            </div>
+        </div>
+    </div>
+    <div class="translation-grid" id="results">
+        <div class="translation-block">
+            <div class="translation-header">
+                <button class="translate-btn" data-index="0">翻译</button>
+                <button class="copy-btn" data-index="0">复制</button>
+            </div>
+            <div id="result1" class="result-card" contenteditable="true"></div>
+        </div>
+        <div class="translation-block">
+            <div class="translation-header">
+                <button class="translate-btn" data-index="1">翻译</button>
+                <button class="copy-btn" data-index="1">复制</button>
+            </div>
+            <div id="result2" class="result-card" contenteditable="true"></div>
+        </div>
+        <div class="translation-block">
+            <div class="translation-header">
+                <button class="translate-btn" data-index="2">翻译</button>
+                <button class="copy-btn" data-index="2">复制</button>
+            </div>
+            <div id="result3" class="result-card" contenteditable="true"></div>
+        </div>
+    </div>
 </div>
 
-<!-- 检测到的源语言显示 -->
-<div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
+<!-- 货币换算面板 -->
+<div id="tab-currency" class="tab-panel">
+    <div class="panel-box">
+        <div class="panel-header">
+            <h3>货币换算</h3>
+            <span class="hint">来源 latest.currency-api.pages.dev（每日更新）</span>
+        </div>
+        <div class="currency-row">
+            <div class="currency-card">
+                <div class="flag" id="flagFrom">CN</div>
+                <div class="info">
+                    <input type="text" class="search-input" id="currencyFromInput" placeholder="输入货币代码或名称搜索..." autocomplete="off">
+                    <input type="hidden" id="currencyFrom" value="CNY">
+                    <div class="currency-dropdown" id="currencyFromDropdown"></div>
+                </div>
+            </div>
+            <button class="swap-btn" id="swapBtn">⇅</button>
+            <div class="currency-card">
+                <div class="flag" id="flagTo">US</div>
+                <div class="info">
+                    <input type="text" class="search-input" id="currencyToInput" placeholder="输入货币代码或名称搜索..." autocomplete="off">
+                    <input type="hidden" id="currencyTo" value="USD">
+                    <div class="currency-dropdown" id="currencyToDropdown"></div>
+                </div>
+            </div>
+        </div>
+        <div class="amount-label">金额</div>
+        <input type="number" class="amount-input" id="currencyAmount" value="" placeholder="请输入金额">
+        <div class="result-box">
+            <div class="main" id="currencyResult">加载汇率中...</div>
+            <div class="sub" id="currencyRateDetail">—</div>
+        </div>
+        <div class="rate-status">
+            <span><span class="dot"></span>实时汇率已更新</span>
+            <span id="currencyUpdateTime">更新时间：—</span>
+        </div>
+        <div class="common-rates-title">常用汇率（点击设为换算对）</div>
+        <div class="common-rates" id="commonRates"></div>
+    </div>
+</div>
 
-<!-- 目标语言选择（可搜索） -->
-<div id="controls">
-    <div class="lang-select-wrap">
-        <label>目标语言1:</label>
-        <div class="searchable-select" data-target="targetLang1">
-            <input type="text" placeholder="输入搜索..." readonly>
-            <div class="dropdown"></div>
-            <input type="hidden" id="targetLang1" value="zh-CN">
+<!-- 二维码面板 -->
+<div id="tab-qrcode" class="tab-panel">
+    <div class="panel-box">
+        <div class="panel-header">
+            <h3>链接转二维码</h3>
+            <span class="hint">输入即生成</span>
         </div>
-    </div>
-    <div class="lang-select-wrap">
-        <label>目标语言2:</label>
-        <div class="searchable-select" data-target="targetLang2">
-            <input type="text" placeholder="输入搜索..." readonly>
-            <div class="dropdown"></div>
-            <input type="hidden" id="targetLang2" value="en">
+        <div class="qr-input-row">
+            <input type="text" id="qrcodeText" placeholder="https://example.com 或任意文本…">
+            <button id="qrcodeGenerate">生成</button>
         </div>
-    </div>
-    <div class="lang-select-wrap">
-        <label>目标语言3:</label>
-        <div class="searchable-select" data-target="targetLang3">
-            <input type="text" placeholder="输入搜索..." readonly>
-            <div class="dropdown"></div>
-            <input type="hidden" id="targetLang3" value="de">
+        <div class="qr-display" id="qrcodeDisplay">
+            <div class="placeholder">输入链接或文本后自动生成二维码</div>
+        </div>
+        <div class="qr-footer">
+            <div class="btn-group">
+                <button class="download-btn" id="qrcodeDownload" disabled>下载二维码</button>
+                <button class="clear-btn" id="qrcodeClear">清除</button>
+            </div>
+            <span class="tip">二维码在本地生成，内容不会上传到任何服务器；长按图片可保存。</span>
         </div>
     </div>
 </div>
 
-<div class="translation-grid" id="results">
-    <div class="translation-block">
-        <div class="translation-header">
-            <button class="translate-btn" data-index="0">翻译</button>
-            <button class="copy-btn" data-index="0">复制</button>
+<!-- 笔记面板 -->
+<div id="tab-note" class="tab-panel">
+    <div id="notePanel">
+        <div class="note-sidebar">
+            <div class="note-sidebar-header">
+                <button onclick="newNote()">+ 新建笔记</button>
+                <button class="export" onclick="exportCurrentNote()">📤 导出当前笔记</button>
+                <button class="import" onclick="triggerImport()">📥 导入笔记文件</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none;">
+            </div>
+            <div id="noteList"></div>
         </div>
-        <div id="result1" class="result-card" contenteditable="true"></div>
-    </div>
-    <div class="translation-block">
-        <div class="translation-header">
-            <button class="translate-btn" data-index="1">翻译</button>
-            <button class="copy-btn" data-index="1">复制</button>
+        <div class="note-main">
+            <div class="note-toolbar">
+                <div class="toolbar-group">
+                    <button onclick="cmd('undo')" title="撤销">↶</button>
+                    <button onclick="cmd('redo')" title="重做">↷</button>
+                    <button onclick="cmd('cut')" title="剪切">✂</button>
+                    <button onclick="cmd('copy')" title="复制">📋</button>
+                    <button onclick="cmd('paste')" title="粘贴">📥</button>
+                </div>
+
+                <div class="toolbar-group">
+                    <select onchange="setFontName(this.value)" title="字体">
+                        <option value="">字体</option>
+                        <option value="Arial">Arial</option>
+                        <option value="Microsoft YaHei">微软雅黑</option>
+                        <option value="SimSun">宋体</option>
+                        <option value="SimHei">黑体</option>
+                        <option value="KaiTi">楷体</option>
+                        <option value="FangSong">仿宋</option>
+                        <option value="Courier New">Courier New</option>
+                    </select>
+                    <select onchange="setFontSize(this.value)" title="字号">
+                        <option value="">字号</option>
+                        <option value="1">8px</option>
+                        <option value="2">10px</option>
+                        <option value="3">12px</option>
+                        <option value="4">14px</option>
+                        <option value="5">18px</option>
+                        <option value="6">24px</option>
+                        <option value="7">36px</option>
+                    </select>
+                    <button onclick="cmd('bold')" title="加粗"><b>B</b></button>
+                    <button onclick="cmd('italic')" title="斜体"><i>I</i></button>
+                    <button onclick="cmd('underline')" title="下划线"><u>U</u></button>
+                    <button onclick="cmd('strikeThrough')" title="删除线"><s>S</s></button>
+                    <input type="color" onchange="setColor(this.value)" title="字体颜色">
+                    <input type="color" onchange="setBgColor(this.value)" title="背景色" style="background:#fff;">
+                </div>
+
+                <div class="toolbar-group">
+                    <button onclick="cmd('justifyLeft')" title="左对齐">⬅</button>
+                    <button onclick="cmd('justifyCenter')" title="居中">⬌</button>
+                    <button onclick="cmd('justifyRight')" title="右对齐">➡</button>
+                    <button onclick="cmd('justifyFull')" title="两端对齐">☰</button>
+                    <button onclick="cmd('insertUnorderedList')" title="无序列表">•</button>
+                    <button onclick="cmd('insertOrderedList')" title="有序列表">1.</button>
+                    <button onclick="cmd('outdent')" title="减少缩进">⇤</button>
+                    <button onclick="cmd('indent')" title="增加缩进">⇥</button>
+                </div>
+
+                <div class="toolbar-group">
+                    <button onclick="formatBlock('h1')" title="标题1">H1</button>
+                    <button onclick="formatBlock('h2')" title="标题2">H2</button>
+                    <button onclick="formatBlock('h3')" title="标题3">H3</button>
+                    <button onclick="formatBlock('p')" title="正文">正文</button>
+                    <button onclick="formatBlock('blockquote')" title="引用">❝</button>
+                    <button onclick="insertCodeBlock()" title="代码块">代码</button>
+                    <button onclick="insertTable()" title="表格">⊞</button>
+                    <button onclick="insertLink()" title="超链接">🔗</button>
+                    <button onclick="insertImage()" title="插入图片">🖼</button>
+                    <button onclick="insertHr()" title="分隔线">—</button>
+                </div>
+
+                <div class="toolbar-group">
+                    <button onclick="clearFormat()" title="清除格式">清除格式</button>
+                    <button onclick="cmd('removeFormat')" title="清除所有样式">✕</button>
+                </div>
+            </div>
+            <div id="noteEditor" contenteditable="true"></div>
+            <div id="noteStatus">
+                <span class="left" id="noteStatusLeft">—</span>
+                <span id="noteStatusRight">自动保存中...</span>
+            </div>
         </div>
-        <div id="result2" class="result-card" contenteditable="true"></div>
-    </div>
-    <div class="translation-block">
-        <div class="translation-header">
-            <button class="translate-btn" data-index="2">翻译</button>
-            <button class="copy-btn" data-index="2">复制</button>
-        </div>
-        <div id="result3" class="result-card" contenteditable="true"></div>
     </div>
 </div>
+
 </div>
 
 <script>
-// 语言列表
+/* ============================================================
+   标签切换
+============================================================ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+/* ============================================================
+   翻译模块
+============================================================ */
 const languages = {
     "af":"南非荷兰语","sq":"阿尔巴尼亚语","am":"阿姆哈拉语","ar":"阿拉伯语",
     "hy":"亚美尼亚语","az":"阿塞拜疆语","eu":"巴斯克语","be":"白俄罗斯语",
@@ -344,7 +940,6 @@ const languages = {
 };
 const sortedLangs = Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1]));
 
-// ========== 备用翻译接口配置 ==========
 const apiEndpoints = {
     googleapis: {
         name: '接口1: translate.googleapis.com',
@@ -393,7 +988,6 @@ const apiEndpoints = {
 let currentApi = 'googleapis';
 let lastDetectedLang = '';
 
-// 初始化接口下拉框
 function initApiSelect() {
     const select = document.getElementById('apiSelect');
     Object.entries(apiEndpoints).forEach(([key, cfg]) => {
@@ -403,7 +997,6 @@ function initApiSelect() {
 }
 initApiSelect();
 
-// ========== 可搜索语言选择框 ==========
 function initSearchableSelects() {
     document.querySelectorAll('.searchable-select').forEach(wrap => {
         const input = wrap.querySelector('input[type="text"]');
@@ -446,9 +1039,7 @@ function initSearchableSelects() {
         input.addEventListener('click', openDropdown);
 
         input.addEventListener('input', () => {
-            if (!dropdown.classList.contains('open')) {
-                dropdown.classList.add('open');
-            }
+            if (!dropdown.classList.contains('open')) dropdown.classList.add('open');
             renderDropdown(input.value);
         });
 
@@ -469,11 +1060,8 @@ function initSearchableSelects() {
                 if (items[idx]) { items[idx].classList.add('active'); items[idx].scrollIntoView({ block: 'nearest' }); }
             } else if (e.key === 'Enter') {
                 e.preventDefault();
-                if (active) {
-                    active.click();
-                } else if (items.length > 0) {
-                    items[0].click();
-                }
+                if (active) active.click();
+                else if (items.length > 0) items[0].click();
             } else if (e.key === 'Escape') {
                 closeDropdown();
                 input.blur();
@@ -491,56 +1079,38 @@ function initSearchableSelects() {
         });
 
         document.addEventListener('click', (e) => {
-            if (!wrap.contains(e.target)) {
-                closeDropdown();
-            }
+            if (!wrap.contains(e.target)) closeDropdown();
         });
     });
 }
 initSearchableSelects();
 
-// 更新接口状态显示
 function setApiStatus(status) {
     const el = document.getElementById('apiStatus');
     el.className = 'status-badge';
-    if (status === 'ok') {
-        el.classList.add('status-ok');
-        el.textContent = '正常';
-    } else if (status === 'fail') {
-        el.classList.add('status-fail');
-        el.textContent = '失败';
-    } else {
-        el.classList.add('status-testing');
-        el.textContent = '检测中...';
-    }
+    if (status === 'ok') { el.classList.add('status-ok'); el.textContent = '正常'; }
+    else if (status === 'fail') { el.classList.add('status-fail'); el.textContent = '失败'; }
+    else { el.classList.add('status-testing'); el.textContent = '检测中...'; }
 }
 
-// 显示检测到的源语言
 function setDetectedLang(code) {
     const el = document.getElementById('detectedLang');
-    if (!code) {
-        el.innerHTML = '检测到语言：<span class="lang-name">—</span>';
-        return;
-    }
+    if (!code) { el.innerHTML = '检测到语言：<span class="lang-name">—</span>'; return; }
     const name = languages[code] || code;
     el.innerHTML = `检测到语言：<span class="lang-name">${name}</span> (${code})`;
 }
 
-// 检测当前接口是否可用
 async function testApi() {
     setApiStatus('testing');
     const api = apiEndpoints[currentApi];
     if (!api) { setApiStatus('fail'); return false; }
-
     const url = api.build('hello', 'zh-CN');
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 6000);
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeout);
-
         if (!res.ok) { setApiStatus('fail'); return false; }
-
         const data = await res.json();
         const result = api.parse(data);
         const ok = result && result.length > 0 && result !== '翻译失败';
@@ -553,18 +1123,13 @@ async function testApi() {
     }
 }
 
-// 翻译请求（使用当前接口）
 async function translateTo(text, targetLang){
     const api = apiEndpoints[currentApi];
     if (!api) return '翻译失败';
-
     const url = api.build(text, targetLang);
     try {
         const res = await fetch(url);
-        if (!res.ok) {
-            setApiStatus('fail');
-            return '翻译失败';
-        }
+        if (!res.ok) { setApiStatus('fail'); return '翻译失败'; }
         const data = await res.json();
         const result = api.parse(data);
         if (api.detectLang) {
@@ -583,41 +1148,29 @@ async function translateTo(text, targetLang){
     }
 }
 
-// 防抖
 function debounce(fn,delay){let timer=null; return function(...args){clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args),delay);}}
 
-// 实时翻译
 const translateText = debounce(async ()=>{
     const text = document.getElementById('inputText').value.trim();
     ['result1','result2','result3'].forEach((id,i)=>document.getElementById(id).innerText=text?'翻译中...':'');
-    if(!text) {
-        setDetectedLang('');
-        lastDetectedLang = '';
-        return;
-    }
-
+    if(!text) { setDetectedLang(''); lastDetectedLang = ''; return; }
     const langs=['targetLang1','targetLang2','targetLang3'].map(id=>document.getElementById(id).value);
     const results = await Promise.all(langs.map(l=>translateTo(text,l)));
     ['result1','result2','result3'].forEach((id,i)=>document.getElementById(id).innerText=results[i]);
 },500);
 
-// 接口切换
 document.getElementById('apiSelect').addEventListener('change', async function() {
     currentApi = this.value;
     await testApi();
-    if (document.getElementById('inputText').value.trim()) {
-        translateText();
-    }
+    if (document.getElementById('inputText').value.trim()) translateText();
 });
 
-// 事件绑定
 document.getElementById('inputText').addEventListener('input',translateText);
 document.getElementById('clearInput').addEventListener('click',()=>{
     document.getElementById('inputText').value='';
     translateText();
 });
 
-// 单独翻译
 document.querySelectorAll('.translate-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
         const idx=parseInt(btn.dataset.index);
@@ -629,7 +1182,6 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
     });
 });
 
-// 单独复制
 document.querySelectorAll('.copy-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
         const idx=parseInt(btn.dataset.index);
@@ -638,8 +1190,624 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
     });
 });
 
-// 页面加载时检测接口
 testApi();
+
+/* ============================================================
+   货币换算模块（全币种，使用 latest.currency-api.pages.dev）
+============================================================ */
+const currencyList = {
+    "USD":"美元","CNY":"人民币","EUR":"欧元","GBP":"英镑","JPY":"日元",
+    "HKD":"港币","TWD":"新台币","KRW":"韩元","AUD":"澳元","CAD":"加元",
+    "SGD":"新加坡元","CHF":"瑞士法郎","NZD":"新西兰元","THB":"泰铢",
+    "MYR":"马来西亚林吉特","PHP":"菲律宾比索","VND":"越南盾","INR":"印度卢比",
+    "RUB":"俄罗斯卢布","BRL":"巴西雷亚尔","MXN":"墨西哥比索","ZAR":"南非兰特",
+    "AED":"阿联酋迪拉姆","AFN":"阿富汗尼","ALL":"阿尔巴尼亚列克","AMD":"亚美尼亚德拉姆",
+    "ANG":"荷属安的列斯盾","AOA":"安哥拉宽扎","ARS":"阿根廷比索","AWG":"阿鲁巴弗罗林",
+    "AZN":"阿塞拜疆马纳特","BAM":"波黑可兑换马克","BBD":"巴巴多斯元","BDT":"孟加拉塔卡",
+    "BGN":"保加利亚列弗","BHD":"巴林第纳尔","BIF":"布隆迪法郎","BMD":"百慕大元",
+    "BND":"文莱元","BOB":"玻利维亚诺","BSD":"巴哈马元","BTN":"不丹努尔特鲁姆",
+    "BWP":"博茨瓦纳普拉","BYN":"白俄罗斯卢布","BZD":"伯利兹元","CDF":"刚果法郎",
+    "CLP":"智利比索","COP":"哥伦比亚比索","CRC":"哥斯达黎加科朗","CUP":"古巴比索",
+    "CVE":"佛得角埃斯库多","CZK":"捷克克朗","DJF":"吉布提法郎","DKK":"丹麦克朗",
+    "DOP":"多米尼加比索","DZD":"阿尔及利亚第纳尔","EGP":"埃及镑","ERN":"厄立特里亚纳克法",
+    "ETB":"埃塞俄比亚比尔","FJD":"斐济元","FKP":"福克兰群岛镑","FOK":"法罗群岛克朗",
+    "GGP":"根西岛镑","GHS":"加纳塞地","GIP":"直布罗陀镑","GMD":"冈比亚达拉西",
+    "GNF":"几内亚法郎","GTQ":"危地马拉格查尔","GYD":"圭亚那元","HNL":"洪都拉斯伦皮拉",
+    "HRK":"克罗地亚库纳","HTG":"海地古德","HUF":"匈牙利福林","IDR":"印尼盾",
+    "ILS":"以色列新谢克尔","IMP":"马恩岛镑","IQD":"伊拉克第纳尔","IRR":"伊朗里亚尔",
+    "ISK":"冰岛克朗","JEP":"泽西岛镑","JMD":"牙买加元","JOD":"约旦第纳尔",
+    "KES":"肯尼亚先令","KGS":"吉尔吉斯斯坦索姆","KHR":"柬埔寨瑞尔","KID":"基里巴斯元",
+    "KMF":"科摩罗法郎","KWD":"科威特第纳尔","KYD":"开曼群岛元","KZT":"哈萨克斯坦坚戈",
+    "LAK":"老挝基普","LBP":"黎巴嫩镑","LKR":"斯里兰卡卢比","LRD":"利比里亚元",
+    "LSL":"莱索托洛蒂","LYD":"利比亚第纳尔","MAD":"摩洛哥迪拉姆","MDL":"摩尔多瓦列伊",
+    "MGA":"马达加斯加阿里亚里","MKD":"马其顿第纳尔","MMK":"缅甸元","MNT":"蒙古图格里克",
+    "MOP":"澳门元","MRU":"毛里塔尼亚乌吉亚","MUR":"毛里求斯卢比","MVR":"马尔代夫拉菲亚",
+    "MWK":"马拉维克瓦查","MZN":"莫桑比克梅蒂卡尔","NAD":"纳米比亚元","NGN":"尼日利亚奈拉",
+    "NIO":"尼加拉瓜科多巴","NOK":"挪威克朗","NPR":"尼泊尔卢比","OMR":"阿曼里亚尔",
+    "PAB":"巴拿马巴波亚","PEN":"秘鲁索尔","PGK":"巴布亚新几内亚基那","PKR":"巴基斯坦卢比",
+    "PLN":"波兰兹罗提","PYG":"巴拉圭瓜拉尼","QAR":"卡塔尔里亚尔","RON":"罗马尼亚列伊",
+    "RSD":"塞尔维亚第纳尔","RWF":"卢旺达法郎","SAR":"沙特里亚尔","SBD":"所罗门群岛元",
+    "SCR":"塞舌尔卢比","SDG":"苏丹镑","SEK":"瑞典克朗","SHP":"圣赫勒拿镑",
+    "SLE":"塞拉利昂利昂","SOS":"索马里先令","SRD":"苏里南元","SSP":"南苏丹镑",
+    "STN":"圣多美和普林西比多布拉","SYP":"叙利亚镑","SZL":"斯威士兰里兰吉尼",
+    "TJS":"塔吉克斯坦索莫尼","TMT":"土库曼斯坦马纳特","TND":"突尼斯第纳尔",
+    "TOP":"汤加潘加","TRY":"土耳其里拉","TTD":"特立尼达和多巴哥元","TVD":"图瓦卢元",
+    "TZS":"坦桑尼亚先令","UAH":"乌克兰格里夫纳","UGX":"乌干达先令","UYU":"乌拉圭比索",
+    "UZS":"乌兹别克斯坦索姆","VES":"委内瑞拉玻利瓦尔","VUV":"瓦努阿图瓦图",
+    "WST":"萨摩亚塔拉","XAF":"中非金融合作法郎","XCD":"东加勒比元","XDR":"特别提款权",
+    "XOF":"西非金融合作法郎","XPF":"太平洋法郎","YER":"也门里亚尔","ZMW":"赞比亚克瓦查",
+    "ZWL":"津巴布韦元"
+};
+
+const currencyFlags = {
+    "USD":"US","CNY":"CN","EUR":"EU","GBP":"GB","JPY":"JP",
+    "HKD":"HK","TWD":"TW","KRW":"KR","AUD":"AU","CAD":"CA",
+    "SGD":"SG","CHF":"CH","NZD":"NZ","THB":"TH",
+    "MYR":"MY","PHP":"PH","VND":"VN","INR":"IN",
+    "RUB":"RU","BRL":"BR","MXN":"MX","ZAR":"ZA"
+};
+
+function updateFlag(id, code) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = currencyFlags[code] || code.substring(0,2);
+}
+
+function initCurrencySearch(inputId, hiddenId, dropdownId, defaultCode, flagId) {
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+    const dropdown = document.getElementById(dropdownId);
+
+    input.value = `${defaultCode} - ${currencyList[defaultCode] || ''}`;
+    hidden.value = defaultCode;
+    updateFlag(flagId, defaultCode);
+
+    const renderDropdown = (filter = '') => {
+        const f = filter.toLowerCase();
+        const entries = Object.entries(currencyList).filter(([code, name]) =>
+            code.toLowerCase().includes(f) || name.toLowerCase().includes(f)
+        );
+        if (entries.length === 0) {
+            dropdown.innerHTML = '<div class="currency-dropdown-empty">无匹配货币</div>';
+        } else {
+            dropdown.innerHTML = entries.slice(0, 100).map(([code, name]) =>
+                `<div class="currency-dropdown-item${code === hidden.value ? ' selected' : ''}" data-code="${code}">
+                    <div class="mini-flag">${currencyFlags[code] || code.substring(0,2)}</div>
+                    <div class="mini-info">
+                        <div class="mini-code">${code} - ${name}</div>
+                    </div>
+                </div>`
+            ).join('');
+        }
+    };
+
+    const openDropdown = () => {
+        renderDropdown('');
+        dropdown.classList.add('open');
+        input.select();
+    };
+
+    const closeDropdown = () => {
+        dropdown.classList.remove('open');
+        input.value = `${hidden.value} - ${currencyList[hidden.value] || ''}`;
+    };
+
+    input.addEventListener('focus', openDropdown);
+    input.addEventListener('click', openDropdown);
+    input.addEventListener('input', () => {
+        if (!dropdown.classList.contains('open')) dropdown.classList.add('open');
+        renderDropdown(input.value);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const items = dropdown.querySelectorAll('.currency-dropdown-item');
+        const active = dropdown.querySelector('.currency-dropdown-item.active');
+        let idx = Array.from(items).indexOf(active);
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            idx = idx < items.length - 1 ? idx + 1 : 0;
+            items.forEach(i => i.classList.remove('active'));
+            if (items[idx]) { items[idx].classList.add('active'); items[idx].scrollIntoView({ block: 'nearest' }); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            idx = idx > 0 ? idx - 1 : items.length - 1;
+            items.forEach(i => i.classList.remove('active'));
+            if (items[idx]) { items[idx].classList.add('active'); items[idx].scrollIntoView({ block: 'nearest' }); }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (active) active.click();
+            else if (items.length > 0) items[0].click();
+        } else if (e.key === 'Escape') {
+            closeDropdown();
+            input.blur();
+        }
+    });
+
+    dropdown.addEventListener('click', (e) => {
+        const item = e.target.closest('.currency-dropdown-item');
+        if (!item) return;
+        const code = item.dataset.code;
+        hidden.value = code;
+        input.value = `${code} - ${currencyList[code] || ''}`;
+        updateFlag(flagId, code);
+        dropdown.classList.remove('open');
+        convertCurrency();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!input.parentElement.contains(e.target)) closeDropdown();
+    });
+}
+
+initCurrencySearch('currencyFromInput', 'currencyFrom', 'currencyFromDropdown', 'CNY', 'flagFrom');
+initCurrencySearch('currencyToInput', 'currencyTo', 'currencyToDropdown', 'USD', 'flagTo');
+
+document.getElementById('currencyAmount').addEventListener('input', convertCurrency);
+document.getElementById('swapBtn').addEventListener('click', () => {
+    const fromHidden = document.getElementById('currencyFrom');
+    const toHidden = document.getElementById('currencyTo');
+    const fromInput = document.getElementById('currencyFromInput');
+    const toInput = document.getElementById('currencyToInput');
+    const tmp = fromHidden.value;
+    fromHidden.value = toHidden.value;
+    toHidden.value = tmp;
+    fromInput.value = `${fromHidden.value} - ${currencyList[fromHidden.value] || ''}`;
+    toInput.value = `${toHidden.value} - ${currencyList[toHidden.value] || ''}`;
+    updateFlag('flagFrom', fromHidden.value);
+    updateFlag('flagTo', toHidden.value);
+    convertCurrency();
+});
+
+let lastRates = null;
+let lastBase = null;
+
+/* ====== 换算函数（全币种，使用 latest.currency-api.pages.dev） ====== */
+async function convertCurrency() {
+    const amountInput = document.getElementById('currencyAmount');
+    const amount = parseFloat(amountInput.value);
+    const from = document.getElementById('currencyFrom').value.toLowerCase();
+    const to = document.getElementById('currencyTo').value.toLowerCase();
+    const fromUpper = document.getElementById('currencyFrom').value;
+    const toUpper = document.getElementById('currencyTo').value;
+    const resultEl = document.getElementById('currencyResult');
+    const detailEl = document.getElementById('currencyRateDetail');
+
+    // 金额为空时只显示汇率
+    if (isNaN(amount) || amountInput.value.trim() === '') {
+        if (lastRates && lastRates[to]) {
+            const rate = lastRates[to];
+            resultEl.textContent = '—';
+            detailEl.textContent = `1 ${fromUpper} = ${rate.toFixed(4)} ${toUpper}   ·   1 ${toUpper} = ${(1/rate).toFixed(4)} ${fromUpper}`;
+        } else {
+            resultEl.textContent = '加载汇率中...';
+            detailEl.textContent = '—';
+        }
+        return;
+    }
+
+    try {
+        if (!lastRates || lastBase !== from) {
+            // 使用 currency-api（jsDelivr，支持 CORS，支持全币种）
+            const url = `https://latest.currency-api.pages.dev/v1/currencies/${from}.json`;
+            console.log('正在请求汇率:', url);
+
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            const data = await res.json();
+            console.log('汇率返回数据:', data);
+
+            if (!data[from]) throw new Error('返回数据中没有 ' + from + ' 字段');
+
+            lastRates = data[from];  // {usd: 0.14, eur: 0.13, ...}
+            lastBase = from;
+
+            const updateTime = data.date || '';
+            document.getElementById('currencyUpdateTime').textContent = '更新时间：' + updateTime;
+            renderCommonRates(lastRates);
+        }
+
+        const rate = lastRates[to];
+        if (!rate) throw new Error('未找到 ' + toUpper + ' 的汇率');
+
+        const converted = (amount * rate).toFixed(4);
+        resultEl.textContent = `${amount.toLocaleString()} ${fromUpper} = ${converted} ${toUpper}`;
+        detailEl.textContent = `1 ${fromUpper} = ${rate.toFixed(4)} ${toUpper}   ·   1 ${toUpper} = ${(1/rate).toFixed(4)} ${fromUpper}`;
+    } catch (e) {
+        console.error('汇率请求失败:', e);
+        resultEl.textContent = '汇率加载失败';
+        detailEl.textContent = '错误：' + e.message;
+    }
+}
+
+function renderCommonRates(rates) {
+    const container = document.getElementById('commonRates');
+    const from = document.getElementById('currencyFrom').value;
+    if (!lastRates) return;
+    const displayPairs = [
+        [from, 'USD'], [from, 'BRL'], [from, 'GBP'], [from, 'EUR']
+    ];
+    container.innerHTML = '';
+    displayPairs.forEach(([base, target]) => {
+        const rate = lastRates[target.toLowerCase()];
+        if (!rate) return;
+        const card = document.createElement('div');
+        card.className = 'rate-card';
+        card.innerHTML = `
+            <div class="pair">${base} / ${target}</div>
+            <div class="value">1 ${base} = ${rate.toFixed(4)} ${target}</div>
+            <div class="reverse">1 ${target} = ${(1/rate).toFixed(4)} ${base}</div>
+            <div class="arrow">›</div>
+        `;
+        card.addEventListener('click', () => {
+            document.getElementById('currencyFrom').value = base;
+            document.getElementById('currencyTo').value = target;
+            document.getElementById('currencyFromInput').value = `${base} - ${currencyList[base] || ''}`;
+            document.getElementById('currencyToInput').value = `${target} - ${currencyList[target] || ''}`;
+            updateFlag('flagFrom', base);
+            updateFlag('flagTo', target);
+            convertCurrency();
+        });
+        container.appendChild(card);
+    });
+}
+
+/* ============================================================
+   二维码模块
+============================================================ */
+let currentQrBlobUrl = null;
+let currentQrFilename = 'qrcode.png';
+
+document.getElementById('qrcodeGenerate').addEventListener('click', () => {
+    const text = document.getElementById('qrcodeText').value.trim();
+    const display = document.getElementById('qrcodeDisplay');
+    const downloadBtn = document.getElementById('qrcodeDownload');
+
+    if (!text) {
+        display.innerHTML = '<div class="placeholder">请输入链接或文本</div>';
+        downloadBtn.disabled = true;
+        return;
+    }
+
+    const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(text)}`;
+    display.innerHTML = `<img src="${url}" alt="二维码" crossorigin="anonymous">`;
+
+    fetch(url)
+        .then(res => res.blob())
+        .then(blob => {
+            if (currentQrBlobUrl) URL.revokeObjectURL(currentQrBlobUrl);
+            currentQrBlobUrl = URL.createObjectURL(blob);
+            currentQrFilename = 'qrcode_' + Date.now() + '.png';
+            downloadBtn.disabled = false;
+        })
+        .catch(err => {
+            console.error('二维码下载准备失败:', err);
+            downloadBtn.disabled = true;
+        });
+});
+
+document.getElementById('qrcodeDownload').addEventListener('click', () => {
+    if (!currentQrBlobUrl) return;
+    const a = document.createElement('a');
+    a.href = currentQrBlobUrl;
+    a.download = currentQrFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+});
+
+document.getElementById('qrcodeClear').addEventListener('click', () => {
+    document.getElementById('qrcodeText').value = '';
+    document.getElementById('qrcodeDisplay').innerHTML = '<div class="placeholder">输入链接或文本后自动生成二维码</div>';
+    document.getElementById('qrcodeDownload').disabled = true;
+    if (currentQrBlobUrl) {
+        URL.revokeObjectURL(currentQrBlobUrl);
+        currentQrBlobUrl = null;
+    }
+});
+
+/* ============================================================
+   笔记模块（导出/导入 JSON 文件）
+============================================================ */
+let db;
+const request = indexedDB.open("NotesDB", 1);
+
+request.onupgradeneeded = function(e) {
+    db = e.target.result;
+    if (!db.objectStoreNames.contains("notes")) {
+        db.createObjectStore("notes", { keyPath: "id" });
+    }
+};
+
+request.onsuccess = function(e) {
+    db = e.target.result;
+    loadNotes();
+};
+
+let notes = [];
+let currentId = null;
+
+const noteEditor = document.getElementById("noteEditor");
+const noteListEl = document.getElementById("noteList");
+const noteSidebar = document.querySelector(".note-sidebar");
+const noteStatusLeft = document.getElementById("noteStatusLeft");
+const noteStatusRight = document.getElementById("noteStatusRight");
+
+const savedWidth = localStorage.getItem("sidebar_width");
+if (savedWidth) noteSidebar.style.width = savedWidth;
+
+/* ===== 加载笔记 ===== */
+function loadNotes() {
+    const tx = db.transaction(["notes"], "readonly");
+    const store = tx.objectStore("notes");
+    const req = store.getAll();
+    req.onsuccess = function() {
+        notes = req.result || [];
+        if (notes.length === 0) {
+            createNote();
+        } else {
+            renderNoteList();
+            openNote(notes[0].id);
+        }
+    };
+}
+
+function saveNote(note) {
+    const tx = db.transaction(["notes"], "readwrite");
+    const store = tx.objectStore("notes");
+    store.put(note);
+}
+
+function removeNote(id) {
+    const tx = db.transaction(["notes"], "readwrite");
+    const store = tx.objectStore("notes");
+    store.delete(id);
+}
+
+/* ===== 富文本命令 ===== */
+function cmd(command, value = null) {
+    document.execCommand(command, false, value);
+    updateNoteStatus();
+}
+
+function setFontName(name) {
+    if (name) { document.execCommand("fontName", false, name); updateNoteStatus(); }
+}
+
+function setFontSize(size) {
+    if (size) { document.execCommand("fontSize", false, size); updateNoteStatus(); }
+}
+
+function setColor(color) { document.execCommand("foreColor", false, color); updateNoteStatus(); }
+function setBgColor(color) { document.execCommand("hiliteColor", false, color); updateNoteStatus(); }
+function formatBlock(tag) { document.execCommand("formatBlock", false, tag); updateNoteStatus(); }
+function clearFormat() { document.execCommand("removeFormat", false, null); updateNoteStatus(); }
+
+function insertCodeBlock() {
+    const html = `<pre><code>代码</code></pre>`;
+    document.execCommand("insertHTML", false, html);
+    updateNoteStatus();
+}
+
+function insertTable() {
+    const html = `
+    <table>
+        <tr><th>标题1</th><th>标题2</th></tr>
+        <tr><td>内容</td><td>内容</td></tr>
+    </table>`;
+    document.execCommand("insertHTML", false, html);
+    updateNoteStatus();
+}
+
+function insertLink() {
+    const url = prompt("输入链接");
+    if (url) { document.execCommand("createLink", false, url); updateNoteStatus(); }
+}
+
+function insertImage() {
+    const url = prompt("输入图片链接");
+    if (url) { document.execCommand("insertImage", false, url); updateNoteStatus(); }
+}
+
+function insertHr() {
+    document.execCommand("insertHorizontalRule", false, null);
+    updateNoteStatus();
+}
+
+/* ===== 状态栏更新 ===== */
+function updateNoteStatus() {
+    const text = noteEditor.innerText || '';
+    const chars = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    noteStatusLeft.textContent = `${chars} 字符 · ${words} 词`;
+    noteStatusRight.textContent = '💾 已保存';
+    noteStatusRight.style.color = '#4caf50';
+}
+
+/* ===== 创建 / 打开 / 保存 ===== */
+function createNote() {
+    const note = {
+        id: Date.now(),
+        title: "未命名笔记",
+        content: "",
+        customTitle: false
+    };
+    notes.unshift(note);
+    saveNote(note);
+    renderNoteList();
+    openNote(note.id);
+}
+
+function newNote() { createNote(); }
+
+function openNote(id) {
+    currentId = id;
+    const note = notes.find(n => n.id === id);
+    if (!note) return;
+    noteEditor.innerHTML = note.content;
+    renderNoteList();
+    updateNoteStatus();
+}
+
+function saveCurrent() {
+    const note = notes.find(n => n.id === currentId);
+    if (!note) return;
+    note.content = noteEditor.innerHTML;
+    const text = noteEditor.innerText.trim();
+    if (!note.customTitle && (note.title === "未命名笔记" || note.title === "空白笔记")) {
+        note.title = text.substring(0, 20) || "空白笔记";
+    }
+    saveNote(note);
+    renderNoteList();
+    updateNoteStatus();
+}
+
+function renameNote() {
+    const note = notes.find(n => n.id === currentId);
+    if (!note) return;
+    const name = prompt("输入新名称", note.title);
+    if (name === null) return;
+    note.title = name.trim() || "未命名笔记";
+    note.customTitle = true;
+    saveNote(note);
+    renderNoteList();
+}
+
+function deleteNote() {
+    if (!confirm("删除当前笔记？")) return;
+    notes = notes.filter(n => n.id !== currentId);
+    removeNote(currentId);
+    if (notes.length === 0) createNote();
+    else openNote(notes[0].id);
+}
+
+function renderNoteList() {
+    noteListEl.innerHTML = "";
+    notes.forEach(note => {
+        const div = document.createElement("div");
+        div.className = "note-item";
+        if (note.id === currentId) div.classList.add("active");
+        div.innerHTML = `<span>${note.title}</span>`;
+        div.onclick = () => openNote(note.id);
+        noteListEl.appendChild(div);
+    });
+}
+
+/* ===== 导出笔记为 JSON 文件 ===== */
+function exportCurrentNote() {
+    const note = notes.find(n => n.id === currentId);
+    if (!note) {
+        alert('没有可导出的笔记');
+        return;
+    }
+    const data = {
+        version: 1,
+        title: note.title,
+        content: note.content,
+        exportedAt: new Date().toISOString()
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeTitle = note.title.replace(/[\\/:*?"<>|]/g, '_').substring(0, 50) || 'note';
+    a.download = `${safeTitle}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+/* ===== 触发导入文件选择 ===== */
+function triggerImport() {
+    document.getElementById('importFileInput').click();
+}
+
+/* ===== 处理导入文件 ===== */
+document.getElementById('importFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        try {
+            const data = JSON.parse(event.target.result);
+            if (!data.title && !data.content) {
+                alert('文件格式不正确：缺少 title 或 content');
+                return;
+            }
+            const note = {
+                id: Date.now(),
+                title: (data.title || '导入笔记') + '（导入）',
+                content: data.content || '',
+                customTitle: true
+            };
+            notes.unshift(note);
+            saveNote(note);
+            renderNoteList();
+            openNote(note.id);
+            alert(`导入成功：${note.title}`);
+        } catch (err) {
+            console.error('导入失败:', err);
+            alert('导入失败：文件不是有效的 JSON 格式');
+        }
+        e.target.value = '';
+    };
+    reader.readAsText(file);
+});
+
+/* ===== 自动保存 ===== */
+let saveTimer = null;
+noteEditor.addEventListener("input", () => {
+    noteStatusRight.textContent = '✍️ 编辑中...';
+    noteStatusRight.style.color = '#ff9800';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        saveCurrent();
+    }, 300);
+});
+
+/* ===== 图片粘贴 ===== */
+noteEditor.addEventListener("paste", (e) => {
+    const items = e.clipboardData.items;
+    for (let item of items) {
+        if (item.type.indexOf("image") !== -1) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const html = `<img src="${event.target.result}">`;
+                document.execCommand("insertHTML", false, html);
+                saveCurrent();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+});
+
+/* ===== 链接 Ctrl+点击打开 ===== */
+noteEditor.addEventListener("click", (e) => {
+    const link = e.target.closest("a");
+    if (link && e.ctrlKey) {
+        window.open(link.href, "_blank");
+    }
+});
+
+/* ===== 左侧宽度记忆 ===== */
+let resizeTimer;
+noteSidebar.addEventListener("mouseup", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        localStorage.setItem("sidebar_width", noteSidebar.offsetWidth + "px");
+    }, 100);
+});
+
+/* ===== 初始化货币换算 ===== */
+window.addEventListener('load', () => {
+    convertCurrency();
+});
 </script>
+
 </body>
 </html>
