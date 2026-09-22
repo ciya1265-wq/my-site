@@ -254,6 +254,57 @@ body {
 }
 #noteStatus .left { color: #999; }
 
+/* 筛选结果样式 */
+.filtered-result {
+    margin: 10px 0;
+    padding: 10px;
+    background: #f0f7ff;
+    border: 1px solid #90caf9;
+    border-radius: 8px;
+}
+.filtered-banner {
+    font-size: 13px;
+    color: #1976d2;
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    background: #e3f2fd;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.filtered-banner button {
+    padding: 2px 10px;
+    border: none;
+    border-radius: 4px;
+    background: #f44336;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+}
+.filtered-result table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0;
+    table-layout: fixed;
+}
+.filtered-result th,
+.filtered-result td {
+    border: 1px solid #90caf9;
+    padding: 6px 10px;
+    font-size: 13px;
+    background: #fff;
+    word-break: break-all;
+    white-space: normal;
+    vertical-align: top;
+}
+.filtered-result th {
+    background: #e3f2fd;
+    font-weight: bold;
+    color: #1976d2;
+}
+
 /* ============================================================
    翻译 / 货币 / 二维码
 ============================================================ */
@@ -589,7 +640,6 @@ textarea {
 .qr-footer .download-btn:disabled { background: #bbb; cursor: not-allowed; }
 .qr-footer .tip { font-size: 12px; color: #999; }
 
-/* 查找替换弹窗 */
 #findReplaceModal {
     display: none;
     position: fixed;
@@ -623,7 +673,6 @@ textarea {
 .find-modal-actions .btn-primary { background: #1976d2; color: #fff; }
 .find-modal-actions .btn-secondary { background: #e0e0e0; color: #333; }
 
-/* 单元格筛选弹窗 */
 #cellFilterModal {
     display: none;
     position: fixed;
@@ -938,7 +987,7 @@ textarea {
             <label>筛选方式</label>
             <select id="filterMode">
                 <option value="equals">只看该值（精确匹配）</option>
-                <option value="contains">包含该值（模糊匹配）</option>
+                <option value="contains" selected>包含该值（模糊匹配）</option>
                 <option value="notContains">排除该值（隐藏匹配行）</option>
             </select>
         </div>
@@ -1657,7 +1706,7 @@ function applyVAlignSetting() {
 }
 
 /* ===== 按单元格筛选 ===== */
-let filterTarget = null;   // { table, colIndex, colName }
+let filterTarget = null;
 
 function getCurrentCell() {
     const sel = window.getSelection();
@@ -1689,7 +1738,7 @@ function openCellFilter() {
 
     document.getElementById('filterColName').textContent = colName;
     document.getElementById('filterInputValue').value = '';
-    document.getElementById('filterMode').value = 'equals';
+    document.getElementById('filterMode').value = 'contains';
 
     document.getElementById('cellFilterModal').classList.add('open');
     setTimeout(() => document.getElementById('filterInputValue').focus(), 50);
@@ -1699,39 +1748,167 @@ function closeCellFilter() {
     document.getElementById('cellFilterModal').classList.remove('open');
 }
 
+/* ===== 核心：解析合并单元格 ===== */
+/* 把表格解析成一个二维数组，每一行都是完整的 N 列数据（包含从合并单元格继承的值） */
+function parseTableGrid(table) {
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const totalCols = rows[0] ? rows[0].children.length : 0;
+    
+    // 记录每个位置是否已经被上面的 rowspan 占用了
+    const occupied = [];  // occupied[rowIndex][colIndex] = true / false
+    for (let r = 0; r < rows.length; r++) {
+        occupied[r] = new Array(totalCols).fill(false);
+    }
+    
+    // 存储每一行每一列的值
+    const grid = [];  // grid[rowIndex][colIndex] = 文本值
+    for (let r = 0; r < rows.length; r++) {
+        grid[r] = new Array(totalCols).fill('');
+    }
+    
+    for (let r = 0; r < rows.length; r++) {
+        const cells = Array.from(rows[r].children);
+        let colIdx = 0;
+        for (const cell of cells) {
+            // 跳过被上方 rowspan 占用的列
+            while (colIdx < totalCols && occupied[r][colIdx]) {
+                colIdx++;
+            }
+            if (colIdx >= totalCols) break;
+            
+            const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
+            const colspan = parseInt(cell.getAttribute('colspan')) || 1;
+            const text = cell.innerText.trim();
+            
+            // 填充 colspan × rowspan 的范围
+            for (let dr = 0; dr < rowspan; dr++) {
+                for (let dc = 0; dc < colspan; dc++) {
+                    if (r + dr < rows.length && colIdx + dc < totalCols) {
+                        grid[r + dr][colIdx + dc] = text;
+                        occupied[r + dr][colIdx + dc] = true;
+                    }
+                }
+            }
+            colIdx += colspan;
+        }
+    }
+    
+    return { grid, totalCols };
+}
+
+/* ===== 重新渲染表格（含合并） ===== */
+function renderGrid(grid, headerRowIndex, table) {
+    if (grid.length === 0) return '';
+    
+    const totalCols = grid[0].length;
+    
+    // 判断每一列每一行是否应该合并（向上合并）
+    // mergeWithPrev[r][c] = true 表示该单元格与上一行合并（不输出）
+    // rowspanCount[r][c] = n 表示从该行开始合并 n 行
+    const mergeWithPrev = [];
+    const rowspanCount = [];
+    for (let r = 0; r < grid.length; r++) {
+        mergeWithPrev[r] = new Array(totalCols).fill(false);
+        rowspanCount[r] = new Array(totalCols).fill(1);
+    }
+    
+    for (let c = 0; c < totalCols; c++) {
+        let start = 0;
+        for (let r = 1; r <= grid.length; r++) {
+            const prev = grid[start][c];
+            const curr = r < grid.length ? grid[r][c] : '__END__';
+            if (curr !== prev) {
+                const span = r - start;
+                if (span > 1) {
+                    rowspanCount[start][c] = span;
+                    for (let k = start + 1; k < r; k++) mergeWithPrev[k][c] = true;
+                }
+                start = r;
+            }
+        }
+    }
+    
+    let html = '';
+    for (let r = 0; r < grid.length; r++) {
+        html += '<tr>';
+        for (let c = 0; c < totalCols; c++) {
+            if (mergeWithPrev[r][c]) continue;
+            const span = rowspanCount[r][c];
+            const rowspanAttr = span > 1 ? ` rowspan="${span}"` : '';
+            const text = grid[r][c];
+            if (r === headerRowIndex) {
+                html += `<th${rowspanAttr}>${text}</th>`;
+            } else {
+                html += `<td${rowspanAttr}>${text}</td>`;
+            }
+        }
+        html += '</tr>';
+    }
+    return html;
+}
+
 function applyCellFilter() {
     if (!filterTarget) return;
     const value = document.getElementById('filterInputValue').value.trim().toLowerCase();
-    if (!value) {
-        alert('请输入筛选值');
-        return;
-    }
+    if (!value) { alert('请输入筛选值'); return; }
     const mode = document.getElementById('filterMode').value;
-    const { table, colIndex } = filterTarget;
+    const { table, colIndex, colName } = filterTarget;
 
-    let visible = 0, total = 0;
-    table.querySelectorAll('tr').forEach(row => {
-        if (row.querySelector('th') && !row.querySelector('td')) return;
-        total++;
-        const cell = row.children[colIndex];
-        if (!cell) { row.style.display = 'none'; return; }
-        const text = cell.innerText.trim().toLowerCase();
+    // 解析原表格为二维网格
+    const { grid, totalCols } = parseTableGrid(table);
+    if (grid.length < 2) { alert('表格没有数据行'); return; }
+
+    // 第一行是表头
+    const headerRow = grid[0];
+    const dataRows = grid.slice(1);
+
+    // 筛选匹配行
+    const matchedRows = dataRows.filter(row => {
+        const cellText = (row[colIndex] || '').toLowerCase();
         let match = false;
-        if (mode === 'equals') match = (text === value);
-        else if (mode === 'contains') match = text.includes(value);
-        else if (mode === 'notContains') match = !text.includes(value);
-        row.style.display = match ? '' : 'none';
-        if (match) visible++;
+        if (mode === 'equals') match = (cellText === value);
+        else if (mode === 'contains') match = cellText.includes(value);
+        else if (mode === 'notContains') match = !cellText.includes(value);
+        return match;
     });
 
+    if (matchedRows.length === 0) { alert('没有匹配的行'); return; }
+
+    // 构建新网格：表头 + 匹配行
+    const newGrid = [headerRow, ...matchedRows];
+
+    // 渲染新表格
+    const newTableHtml = renderGrid(newGrid, 0, table);
+
+    let html = `<div class="filtered-result" contenteditable="false">`;
+    html += `<div class="filtered-banner">🔽 筛选：${colName} ${getModeLabel(mode)} "${value}"（共 ${matchedRows.length} 行）
+        <button onclick="clearCellFilter()">✕ 清除筛选</button>
+    </div>`;
+    html += `<table>${newTableHtml}</table></div>`;
+
+    // 隐藏原表格，插入筛选结果
+    table.style.display = 'none';
+    const existing = document.querySelector('.filtered-result');
+    if (existing) existing.remove();
+    table.insertAdjacentHTML('afterend', html);
+
     closeCellFilter();
-    noteStatusRight.textContent = `🔽 筛选 ${visible}/${total} 行`;
+    noteStatusRight.textContent = `🔽 筛选 ${matchedRows.length}/${dataRows.length} 行`;
     noteStatusRight.style.color = '#1976d2';
+}
+
+function getModeLabel(mode) {
+    if (mode === 'equals') return '等于';
+    if (mode === 'contains') return '包含';
+    if (mode === 'notContains') return '不包含';
+    return '';
 }
 
 function clearCellFilter() {
     if (!filterTarget) { closeCellFilter(); return; }
-    filterTarget.table.querySelectorAll('tr').forEach(row => row.style.display = '');
+    filterTarget.table.style.display = '';
+    const existing = document.querySelector('.filtered-result');
+    if (existing) existing.remove();
     closeCellFilter();
     noteStatusRight.textContent = '✕ 筛选已清除';
     noteStatusRight.style.color = '#4caf50';
