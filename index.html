@@ -4,33 +4,26 @@
 <meta charset="UTF-8">
 <title>多功能工具箱</title>
 <style>
+* { box-sizing: border-box; }
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-    background: #f0f2f5;
     margin: 0;
     padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #f0f2f5;
     color: #333;
 }
-.container {
-    max-width: 960px;
-    margin: 20px auto;
-    padding: 16px 20px;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-h2 {
-    text-align: center;
-    margin: 0 0 12px 0;
-    font-size: 20px;
-}
 
-/* ========== 标签导航栏 ========== */
+/* ===== 顶部标签栏 ===== */
 #tabBar {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 12px;
+    padding: 12px 20px;
+    background: #fff;
+    border-bottom: 1px solid #e8e8e8;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 .tab-btn {
     padding: 6px 18px;
@@ -42,10 +35,7 @@ h2 {
     font-size: 14px;
     transition: all 0.2s;
 }
-.tab-btn:hover {
-    background: #f0f7ff;
-    border-color: #90caf9;
-}
+.tab-btn:hover { background: #f0f7ff; border-color: #90caf9; }
 .tab-btn.active {
     background: #1976d2;
     color: #fff;
@@ -53,298 +43,172 @@ h2 {
     box-shadow: 0 2px 6px rgba(25,118,210,0.3);
 }
 
-/* ========== 标签内容区 ========== */
+/* ===== 面板区 ===== */
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* ========== 通用面板卡片 ========== */
-.panel-box {
+/* ===== 非笔记面板容器 ===== */
+.panel-container {
+    max-width: 960px;
+    margin: 20px auto;
     padding: 20px;
     background: #fff;
-    border: 1px solid #e8e8e8;
     border-radius: 12px;
-    min-height: 300px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
-.panel-header {
+
+/* ============================================================
+   笔记面板：复刻 note.html 布局
+============================================================ */
+#tab-note.active {
+    display: flex;
+    height: calc(100vh - 58px);
+    overflow: hidden;
+}
+
+/* 左侧栏：固定 180px */
+.note-sidebar {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+    overflow: auto;
+    background: white;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 竖排按钮 */
+.note-sidebar-header {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+.note-sidebar-header button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #4a90e2;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: center;
+    margin-bottom: 6px;
+}
+.note-sidebar-header button:last-child { margin-bottom: 0; }
+.note-sidebar-header button:hover { background: #3a7bc8; }
+.note-sidebar-header button.export { background: #4caf50; }
+.note-sidebar-header button.export:hover { background: #43a047; }
+.note-sidebar-header button.import { background: #ff9800; }
+.note-sidebar-header button.import:hover { background: #f57c00; }
+
+#noteList { flex: 1; overflow: auto; }
+.note-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    font-size: 13px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 4px;
 }
-.panel-header h3 { margin: 0; font-size: 18px; color: #222; }
-.panel-header .hint { font-size: 13px; color: #999; }
-
-/* ========== 货币换算面板 ========== */
-.currency-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-}
-.currency-card {
+.note-item:hover { background: #f0f0f0; }
+.note-item.active { background: #e6f0ff; }
+.note-item-title {
     flex: 1;
-    min-width: 220px;
-    padding: 14px 16px;
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: border-color 0.2s;
-    position: relative;
-}
-.currency-card:hover { border-color: #90caf9; }
-.currency-card .flag {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #e3f2fd;
-    color: #1976d2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-.currency-card .info { flex: 1; position: relative; }
-.currency-card .search-input {
-    width: 100%;
-    border: none;
-    outline: none;
-    font-size: 15px;
-    background: transparent;
-    cursor: text;
-    font-weight: bold;
-    color: #222;
-    padding: 0;
-    box-sizing: border-box;
-}
-.currency-card .search-input::placeholder { color: #bbb; font-weight: normal; }
-.currency-card .currency-dropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    max-height: 260px;
-    overflow-y: auto;
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-    z-index: 200;
-    margin-top: 6px;
-}
-.currency-card .currency-dropdown.open { display: block; }
-.currency-card .currency-dropdown-item {
-    padding: 10px 14px;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.currency-card .currency-dropdown-item:hover,
-.currency-card .currency-dropdown-item.active { background: #f0f7ff; }
-.currency-card .currency-dropdown-item.selected { background: #e3f2fd; font-weight: bold; color: #1976d2; }
-.currency-card .currency-dropdown-item .mini-flag {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: #e3f2fd;
-    color: #1976d2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-.currency-card .currency-dropdown-item .mini-info { flex: 1; overflow: hidden; }
-.currency-card .currency-dropdown-item .mini-code { font-size: 14px; color: #222; }
-.currency-card .currency-dropdown-item .mini-name {
-    font-size: 12px;
-    color: #999;
-    margin-top: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.currency-card .currency-dropdown-empty { padding: 12px; text-align: center; color: #999; font-size: 13px; }
-
-.swap-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid #e0e0e0;
-    background: #fff;
+.note-item-actions { display: none; gap: 2px; flex-shrink: 0; }
+.note-item:hover .note-item-actions { display: flex; }
+.note-action-btn {
+    font-size: 12px;
     cursor: pointer;
-    font-size: 16px;
-    color: #1976d2;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.7;
+    user-select: none;
+}
+.note-action-btn:hover { opacity: 1; background: #e0e0e0; }
+
+.note-main {
+    flex: 1;
     display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: white;
+}
+
+.note-toolbar {
+    padding: 8px 10px;
+    background: white;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
     flex-shrink: 0;
 }
-.swap-btn:hover { background: #f0f7ff; border-color: #90caf9; }
-
-.amount-label { font-size: 13px; color: #666; margin-bottom: 6px; }
-.amount-input {
-    width: 100%;
-    padding: 14px 16px;
-    font-size: 22px;
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    outline: none;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
-}
-.amount-input:focus { border-color: #1976d2; box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
-.amount-input::placeholder { color: #bbb; font-size: 18px; }
-
-.result-box {
-    margin-top: 16px;
-    padding: 18px 20px;
-    background: #e8f0fe;
-    border-radius: 12px;
-    border: 1px solid #d2e3fc;
-}
-.result-box .main { font-size: 24px; font-weight: bold; color: #174ea6; }
-.result-box .sub { font-size: 13px; color: #5f6368; margin-top: 6px; }
-
-.rate-status {
-    display: flex;
-    justify-content: space-between;
+.note-toolbar button,
+.note-toolbar select {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    background: #eee;
+    cursor: pointer;
     font-size: 13px;
-    color: #666;
-    margin-top: 10px;
-    flex-wrap: wrap;
-    gap: 8px;
+    color: #333;
 }
-.rate-status .dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #4caf50;
-    margin-right: 6px;
-    vertical-align: middle;
-}
-
-.common-rates-title { font-size: 14px; color: #666; margin: 20px 0 10px; }
-.common-rates {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
-}
-.rate-card {
-    padding: 14px 16px;
-    background: #fafafa;
-    border: 1px solid #e8e8e8;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-}
-.rate-card:hover { background: #f0f7ff; border-color: #90caf9; }
-.rate-card .pair { font-size: 13px; color: #999; margin-bottom: 6px; }
-.rate-card .value { font-size: 16px; font-weight: bold; color: #222; }
-.rate-card .reverse { font-size: 12px; color: #999; margin-top: 4px; }
-.rate-card .arrow {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #bbb;
-    font-size: 18px;
-}
-
-/* ========== 二维码面板 ========== */
-.qr-input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-.qr-input-row input {
-    flex: 1;
-    min-width: 200px;
-    padding: 12px 16px;
-    font-size: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-.qr-input-row input:focus { border-color: #1976d2; box-shadow: 0 0 0 3px rgba(25,118,210,0.1); }
-.qr-input-row button {
-    padding: 12px 28px;
+.note-toolbar button:hover,
+.note-toolbar select:hover { background: #ddd; }
+.note-toolbar input[type="color"] {
+    width: 42px;
+    height: 30px;
+    padding: 4px;
     border: none;
-    border-radius: 10px;
-    background: #1976d2;
-    color: #fff;
-    font-size: 15px;
+    border-radius: 6px;
+    background: #eee;
     cursor: pointer;
-    transition: background 0.2s;
-}
-.qr-input-row button:hover { background: #1565c0; }
-
-.qr-display {
-    min-height: 320px;
-    border: 1px dashed #ddd;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #fafafa;
-    padding: 20px;
-    flex-direction: column;
-    gap: 16px;
-}
-.qr-display .placeholder { color: #bbb; font-size: 14px; }
-.qr-display img {
-    max-width: 240px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    background: #fff;
-    padding: 8px;
 }
 
-.qr-footer {
+#noteEditor {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 25px;
+    background: white;
+    outline: none;
+    line-height: 1.6;
+    font-size: 15px;
+    word-break: break-word;
+}
+#noteEditor img { max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block; }
+#noteEditor table { border-collapse: collapse; width: 100%; margin: 10px 0; table-layout: fixed; }
+#noteEditor td, #noteEditor th { border: 1px solid #ccc; padding: 8px; word-break: break-word; }
+#noteEditor blockquote { border-left: 4px solid #ccc; margin: 10px 0; padding: 10px; background: #f8f8f8; }
+#noteEditor pre { background: #f4f4f4; padding: 12px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+#noteEditor a { color: #2563eb; text-decoration: underline; word-break: break-all; }
+
+#noteStatus {
+    padding: 4px 10px;
+    font-size: 12px;
+    color: #4caf50;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 16px;
-    flex-wrap: wrap;
-    gap: 10px;
+    flex-shrink: 0;
 }
-.qr-footer .btn-group { display: flex; gap: 10px; }
-.qr-footer .clear-btn {
-    padding: 8px 20px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background: #fff;
-    color: #333;
-    cursor: pointer;
-    font-size: 14px;
-}
-.qr-footer .clear-btn:hover { background: #f5f5f5; }
-.qr-footer .download-btn {
-    padding: 8px 20px;
-    border: none;
-    border-radius: 8px;
-    background: #1976d2;
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-}
-.qr-footer .download-btn:hover { background: #1565c0; }
-.qr-footer .download-btn:disabled { background: #bbb; cursor: not-allowed; }
-.qr-footer .tip { font-size: 12px; color: #999; }
+#noteStatus .left { color: #999; }
 
-/* ========== 翻译面板 ========== */
+/* ============================================================
+   翻译 / 货币 / 二维码 样式
+============================================================ */
 #apiBar {
     display: flex;
     align-items: center;
@@ -374,21 +238,19 @@ h2 {
     border-radius: 20px;
     font-size: 13px;
     font-weight: bold;
-    transition: all 0.3s;
 }
 .status-badge::before {
     content: '';
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     display: inline-block;
 }
 .status-badge.status-ok { background: #e8f5e9; color: #2e7d32; }
-.status-badge.status-ok::before { background: #4caf50; box-shadow: 0 0 4px #4caf50; }
+.status-badge.status-ok::before { background: #4caf50; }
 .status-badge.status-fail { background: #ffebee; color: #c62828; }
-.status-badge.status-fail::before { background: #f44336; box-shadow: 0 0 4px #f44336; }
+.status-badge.status-fail::before { background: #f44336; }
 .status-badge.status-testing { background: #fff3e0; color: #e65100; }
-.status-badge.status-testing::before { background: #ff9800; box-shadow: 0 0 4px #ff9800; }
+.status-badge.status-testing::before { background: #ff9800; }
 
 #inputContainer { display: flex; gap: 10px; margin-bottom: 6px; }
 textarea {
@@ -400,18 +262,6 @@ textarea {
     border: 1px solid #ccc;
     resize: vertical;
 }
-button {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 6px;
-    background: #4CAF50;
-    color: #fff;
-    cursor: pointer;
-    font-size: 14px;
-}
-button:hover { background: #45a049; }
-button:disabled { background: #aaa; cursor: not-allowed; }
-
 #detectedLang {
     font-size: 13px;
     color: #666;
@@ -429,14 +279,8 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
     margin-bottom: 10px;
-    align-items: flex-end;
 }
-.lang-select-wrap {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+.lang-select-wrap { position: relative; display: flex; flex-direction: column; gap: 4px; }
 .lang-select-wrap label { font-size: 13px; font-weight: bold; color: #555; }
 .searchable-select { position: relative; }
 .searchable-select input {
@@ -445,21 +289,12 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     font-size: 14px;
     border-radius: 6px;
     border: 1px solid #ccc;
-    background: #fff;
     cursor: text;
-    box-sizing: border-box;
-}
-.searchable-select input:focus {
-    outline: none;
-    border-color: #4CAF50;
-    box-shadow: 0 0 0 2px rgba(76,175,80,0.2);
 }
 .searchable-select .dropdown {
     display: none;
     position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
+    top: 100%; left: 0; right: 0;
     max-height: 260px;
     overflow-y: auto;
     background: #fff;
@@ -470,18 +305,11 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     margin-top: 2px;
 }
 .searchable-select .dropdown.open { display: block; }
-.searchable-select .dropdown-item {
-    padding: 6px 10px;
-    font-size: 14px;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+.searchable-select .dropdown-item { padding: 6px 10px; font-size: 14px; cursor: pointer; }
 .searchable-select .dropdown-item:hover,
 .searchable-select .dropdown-item.active { background: #e8f5e9; color: #2e7d32; }
 .searchable-select .dropdown-item.selected { background: #c8e6c9; font-weight: bold; }
-.searchable-select .dropdown-empty { padding: 8px 10px; font-size: 13px; color: #999; text-align: center; }
+.searchable-select .dropdown-empty { padding: 8px; font-size: 13px; color: #999; text-align: center; }
 
 .translation-grid {
     display: grid;
@@ -497,6 +325,16 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     flex-direction: column;
 }
 .translation-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.translation-header button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #4CAF50;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+.translation-header button:hover { background: #45a049; }
 .result-card {
     height: 220px;
     overflow-y: auto;
@@ -508,209 +346,193 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     word-break: break-word;
     background: #fff;
 }
-.result-card:hover { background: #f1f1f1; }
-.result-card::-webkit-scrollbar { width: 6px; }
-.result-card::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-.result-card::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-.result-card::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-/* ========== 笔记面板 ========== */
-#notePanel {
-    display: flex;
-    height: calc(100vh - 180px);
-    min-height: 500px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-}
-.note-sidebar {
-    width: 220px;
-    min-width: 150px;
-    max-width: 400px;
-    resize: horizontal;
-    overflow: auto;
-    background: #fafafa;
-    border-right: 1px solid #ddd;
-    display: flex;
-    flex-direction: column;
-}
-.note-sidebar-header {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.note-sidebar-header button {
-    width: 100%;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    background: #4a90e2;
-    color: white;
-    cursor: pointer;
-    font-size: 13px;
-}
-.note-sidebar-header button:hover { background: #3a7bc8; }
-.note-sidebar-header button.export { background: #4caf50; }
-.note-sidebar-header button.export:hover { background: #43a047; }
-.note-sidebar-header button.import { background: #ff9800; }
-.note-sidebar-header button.import:hover { background: #f57c00; }
-
-#noteList { flex: 1; overflow: auto; }
-
-/* 笔记列表项：悬停显示重命名/删除按钮 */
-.note-item {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
-}
-.note-item:hover { background: #f0f0f0; }
-.note-item.active { background: #e6f0ff; }
-
-.note-item-title {
+/* 货币 */
+.currency-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.currency-card {
     flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 220px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
 }
-
-.note-item-actions {
-    display: none;
-    gap: 4px;
+.currency-card .flag {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #e3f2fd;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px; font-weight: bold;
     flex-shrink: 0;
 }
-.note-item:hover .note-item-actions {
-    display: flex;
-}
-.note-action-btn {
-    font-size: 13px;
-    cursor: pointer;
-    padding: 2px 5px;
-    border-radius: 4px;
-    opacity: 0.7;
-    user-select: none;
-}
-.note-action-btn:hover {
-    opacity: 1;
-    background: #e0e0e0;
-}
-
-.note-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-
-.note-toolbar {
-    padding: 6px 10px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-}
-.note-toolbar .toolbar-group {
-    display: flex;
-    gap: 2px;
-    padding: 0 6px;
-    border-right: 1px solid #ddd;
-    align-items: center;
-}
-.note-toolbar .toolbar-group:last-child { border-right: none; }
-.note-toolbar button,
-.note-toolbar select {
-    padding: 5px 8px;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    cursor: pointer;
-    font-size: 13px;
-    color: #333;
-    transition: background 0.15s;
-}
-.note-toolbar button:hover,
-.note-toolbar select:hover { background: #e0e0e0; }
-.note-toolbar button.active { background: #d0e0ff; color: #1976d2; }
-.note-toolbar input[type="color"] {
-    width: 32px;
-    height: 28px;
-    padding: 2px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-}
-.note-toolbar .divider {
-    width: 1px;
-    height: 20px;
-    background: #ddd;
-    margin: 0 2px;
-}
-
-#noteEditor {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 25px;
-    background: #fff;
-    outline: none;
-    line-height: 1.6;
-    font-size: 15px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-    word-break: break-word;
-}
-#noteEditor img {
-    max-width: 100%;
-    height: auto;
-    margin: 10px 0;
-    border-radius: 8px;
-    display: block;
-}
-#noteEditor table {
-    border-collapse: collapse;
+.currency-card .info { flex: 1; position: relative; }
+.currency-card .search-input {
     width: 100%;
-    margin: 10px 0;
-    table-layout: fixed;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    font-weight: bold;
+    color: #222;
 }
-#noteEditor td, #noteEditor th {
-    border: 1px solid #ccc;
-    padding: 8px;
-    word-break: break-word;
+.currency-card .currency-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%; left: 0; right: 0;
+    max-height: 260px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    z-index: 200;
+    margin-top: 6px;
 }
-#noteEditor blockquote {
-    border-left: 4px solid #ccc;
-    margin: 10px 0;
-    padding: 10px;
-    background: #f8f8f8;
+.currency-card .currency-dropdown.open { display: block; }
+.currency-card .currency-dropdown-item {
+    padding: 10px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-#noteEditor pre {
-    background: #f4f4f4;
-    padding: 12px;
-    border-radius: 8px;
-    overflow-x: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
+.currency-card .currency-dropdown-item:hover,
+.currency-card .currency-dropdown-item.active { background: #f0f7ff; }
+.currency-card .currency-dropdown-item.selected { background: #e3f2fd; font-weight: bold; color: #1976d2; }
+.currency-card .currency-dropdown-item .mini-flag {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: #e3f2fd;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px; font-weight: bold;
+    flex-shrink: 0;
 }
-#noteEditor a {
-    color: #2563eb;
-    text-decoration: underline;
-    word-break: break-all;
-}
+.currency-card .currency-dropdown-empty { padding: 12px; text-align: center; color: #999; font-size: 13px; }
 
-#noteStatus {
-    padding: 4px 10px;
-    font-size: 12px;
-    color: #4caf50;
-    background: #f8f9fa;
-    border-top: 1px solid #e0e0e0;
-    text-align: right;
+.swap-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 1px solid #e0e0e0;
+    background: #fff;
+    cursor: pointer;
+    font-size: 16px;
+    color: #1976d2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.amount-label { font-size: 13px; color: #666; margin-bottom: 6px; }
+.amount-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 22px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    outline: none;
+    box-sizing: border-box;
+}
+.result-box {
+    margin-top: 16px;
+    padding: 18px 20px;
+    background: #e8f0fe;
+    border-radius: 12px;
+    border: 1px solid #d2e3fc;
+}
+.result-box .main { font-size: 24px; font-weight: bold; color: #174ea6; }
+.result-box .sub { font-size: 13px; color: #5f6368; margin-top: 6px; }
+.rate-status {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #666;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.rate-status .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4caf50;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.common-rates-title { font-size: 14px; color: #666; margin: 20px 0 10px; }
+.common-rates { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.rate-card {
+    padding: 14px 16px;
+    background: #fafafa;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    cursor: pointer;
+}
+.rate-card:hover { background: #f0f7ff; border-color: #90caf9; }
+.rate-card .pair { font-size: 13px; color: #999; margin-bottom: 6px; }
+.rate-card .value { font-size: 16px; font-weight: bold; color: #222; }
+.rate-card .reverse { font-size: 12px; color: #999; margin-top: 4px; }
+
+/* 二维码 */
+.qr-input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.qr-input-row input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    font-size: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    outline: none;
+}
+.qr-input-row button {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 10px;
+    background: #1976d2;
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+}
+.qr-display {
+    min-height: 320px;
+    border: 1px dashed #ddd;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    padding: 20px;
+    flex-direction: column;
+    gap: 16px;
+}
+.qr-display .placeholder { color: #bbb; font-size: 14px; }
+.qr-display img { max-width: 240px; border: 1px solid #eee; border-radius: 8px; padding: 8px; }
+.qr-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
-#noteStatus .left { color: #999; }
+.qr-footer .btn-group { display: flex; gap: 10px; }
+.qr-footer button {
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.qr-footer .clear-btn { border: 1px solid #e0e0e0; background: #fff; color: #333; }
+.qr-footer .download-btn { border: none; background: #1976d2; color: #fff; }
+.qr-footer .download-btn:disabled { background: #bbb; cursor: not-allowed; }
+.qr-footer .tip { font-size: 12px; color: #999; }
 
 /* 查找替换弹窗 */
 #findReplaceModal {
@@ -741,28 +563,13 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     font-size: 14px;
     box-sizing: border-box;
 }
-.find-modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 14px;
-}
-.find-modal-actions button {
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    border: none;
-}
+.find-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.find-modal-actions button { padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; }
 .find-modal-actions .btn-primary { background: #1976d2; color: #fff; }
-.find-modal-actions .btn-primary:hover { background: #1565c0; }
 .find-modal-actions .btn-secondary { background: #e0e0e0; color: #333; }
-.find-modal-actions .btn-secondary:hover { background: #d0d0d0; }
 </style>
 </head>
 <body>
-<div class="container">
-<h2>多功能工具箱</h2>
 
 <div id="tabBar">
     <button class="tab-btn active" data-tab="tab-translate">翻译</button>
@@ -771,81 +578,83 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     <button class="tab-btn" data-tab="tab-note">笔记</button>
 </div>
 
-<!-- 翻译面板 -->
+<!-- 翻译 -->
 <div id="tab-translate" class="tab-panel active">
-    <div id="apiBar">
-        <label>翻译接口:</label>
-        <select id="apiSelect"></select>
-        <span id="apiStatus" class="status-badge status-testing">检测中...</span>
-    </div>
-    <div id="inputContainer">
-        <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
-        <button id="clearInput">清除</button>
-    </div>
-    <div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
-    <div id="controls">
-        <div class="lang-select-wrap">
-            <label>目标语言1:</label>
-            <div class="searchable-select" data-target="targetLang1">
-                <input type="text" placeholder="输入搜索..." readonly>
-                <div class="dropdown"></div>
-                <input type="hidden" id="targetLang1" value="zh-CN">
+    <div class="panel-container">
+        <div id="apiBar">
+            <label>翻译接口:</label>
+            <select id="apiSelect"></select>
+            <span id="apiStatus" class="status-badge status-testing">检测中...</span>
+        </div>
+        <div id="inputContainer">
+            <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
+            <button id="clearInput" style="padding:6px 12px;border:none;border-radius:6px;background:#4CAF50;color:#fff;cursor:pointer;font-size:14px;">清除</button>
+        </div>
+        <div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
+        <div id="controls">
+            <div class="lang-select-wrap">
+                <label>目标语言1:</label>
+                <div class="searchable-select" data-target="targetLang1">
+                    <input type="text" placeholder="输入搜索..." readonly>
+                    <div class="dropdown"></div>
+                    <input type="hidden" id="targetLang1" value="zh-CN">
+                </div>
+            </div>
+            <div class="lang-select-wrap">
+                <label>目标语言2:</label>
+                <div class="searchable-select" data-target="targetLang2">
+                    <input type="text" placeholder="输入搜索..." readonly>
+                    <div class="dropdown"></div>
+                    <input type="hidden" id="targetLang2" value="en">
+                </div>
+            </div>
+            <div class="lang-select-wrap">
+                <label>目标语言3:</label>
+                <div class="searchable-select" data-target="targetLang3">
+                    <input type="text" placeholder="输入搜索..." readonly>
+                    <div class="dropdown"></div>
+                    <input type="hidden" id="targetLang3" value="de">
+                </div>
             </div>
         </div>
-        <div class="lang-select-wrap">
-            <label>目标语言2:</label>
-            <div class="searchable-select" data-target="targetLang2">
-                <input type="text" placeholder="输入搜索..." readonly>
-                <div class="dropdown"></div>
-                <input type="hidden" id="targetLang2" value="en">
+        <div class="translation-grid" id="results">
+            <div class="translation-block">
+                <div class="translation-header">
+                    <button class="translate-btn" data-index="0">翻译</button>
+                    <button class="copy-btn" data-index="0">复制</button>
+                </div>
+                <div id="result1" class="result-card" contenteditable="true"></div>
             </div>
-        </div>
-        <div class="lang-select-wrap">
-            <label>目标语言3:</label>
-            <div class="searchable-select" data-target="targetLang3">
-                <input type="text" placeholder="输入搜索..." readonly>
-                <div class="dropdown"></div>
-                <input type="hidden" id="targetLang3" value="de">
+            <div class="translation-block">
+                <div class="translation-header">
+                    <button class="translate-btn" data-index="1">翻译</button>
+                    <button class="copy-btn" data-index="1">复制</button>
+                </div>
+                <div id="result2" class="result-card" contenteditable="true"></div>
             </div>
-        </div>
-    </div>
-    <div class="translation-grid" id="results">
-        <div class="translation-block">
-            <div class="translation-header">
-                <button class="translate-btn" data-index="0">翻译</button>
-                <button class="copy-btn" data-index="0">复制</button>
+            <div class="translation-block">
+                <div class="translation-header">
+                    <button class="translate-btn" data-index="2">翻译</button>
+                    <button class="copy-btn" data-index="2">复制</button>
+                </div>
+                <div id="result3" class="result-card" contenteditable="true"></div>
             </div>
-            <div id="result1" class="result-card" contenteditable="true"></div>
-        </div>
-        <div class="translation-block">
-            <div class="translation-header">
-                <button class="translate-btn" data-index="1">翻译</button>
-                <button class="copy-btn" data-index="1">复制</button>
-            </div>
-            <div id="result2" class="result-card" contenteditable="true"></div>
-        </div>
-        <div class="translation-block">
-            <div class="translation-header">
-                <button class="translate-btn" data-index="2">翻译</button>
-                <button class="copy-btn" data-index="2">复制</button>
-            </div>
-            <div id="result3" class="result-card" contenteditable="true"></div>
         </div>
     </div>
 </div>
 
-<!-- 货币换算面板 -->
+<!-- 货币 -->
 <div id="tab-currency" class="tab-panel">
-    <div class="panel-box">
-        <div class="panel-header">
-            <h3>货币换算</h3>
-            <span class="hint">来源 latest.currency-api.pages.dev（每日更新）</span>
+    <div class="panel-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:18px;">货币换算</h3>
+            <span style="font-size:13px;color:#999;">来源 latest.currency-api.pages.dev</span>
         </div>
         <div class="currency-row">
             <div class="currency-card">
                 <div class="flag" id="flagFrom">CN</div>
                 <div class="info">
-                    <input type="text" class="search-input" id="currencyFromInput" placeholder="输入货币代码或名称搜索..." autocomplete="off">
+                    <input type="text" class="search-input" id="currencyFromInput" placeholder="搜索货币..." autocomplete="off">
                     <input type="hidden" id="currencyFrom" value="CNY">
                     <div class="currency-dropdown" id="currencyFromDropdown"></div>
                 </div>
@@ -854,7 +663,7 @@ button:disabled { background: #aaa; cursor: not-allowed; }
             <div class="currency-card">
                 <div class="flag" id="flagTo">US</div>
                 <div class="info">
-                    <input type="text" class="search-input" id="currencyToInput" placeholder="输入货币代码或名称搜索..." autocomplete="off">
+                    <input type="text" class="search-input" id="currencyToInput" placeholder="搜索货币..." autocomplete="off">
                     <input type="hidden" id="currencyTo" value="USD">
                     <div class="currency-dropdown" id="currencyToDropdown"></div>
                 </div>
@@ -870,18 +679,15 @@ button:disabled { background: #aaa; cursor: not-allowed; }
             <span><span class="dot"></span>实时汇率已更新</span>
             <span id="currencyUpdateTime">更新时间：—</span>
         </div>
-        <div class="common-rates-title">常用汇率（点击设为换算对）</div>
+        <div class="common-rates-title">常用汇率</div>
         <div class="common-rates" id="commonRates"></div>
     </div>
 </div>
 
-<!-- 二维码面板 -->
+<!-- 二维码 -->
 <div id="tab-qrcode" class="tab-panel">
-    <div class="panel-box">
-        <div class="panel-header">
-            <h3>链接转二维码</h3>
-            <span class="hint">输入即生成</span>
-        </div>
+    <div class="panel-container">
+        <h3 style="margin:0 0 16px 0;font-size:18px;">链接转二维码</h3>
         <div class="qr-input-row">
             <input type="text" id="qrcodeText" placeholder="https://example.com 或任意文本…">
             <button id="qrcodeGenerate">生成</button>
@@ -894,105 +700,54 @@ button:disabled { background: #aaa; cursor: not-allowed; }
                 <button class="download-btn" id="qrcodeDownload" disabled>下载二维码</button>
                 <button class="clear-btn" id="qrcodeClear">清除</button>
             </div>
-            <span class="tip">二维码在本地生成，内容不会上传到任何服务器；长按图片可保存。</span>
+            <span class="tip">二维码在本地生成，内容不会上传到任何服务器。</span>
         </div>
     </div>
 </div>
 
-<!-- 笔记面板 -->
+<!-- 笔记（复刻原版 note.html） -->
 <div id="tab-note" class="tab-panel">
-    <div id="notePanel">
-        <div class="note-sidebar">
-            <div class="note-sidebar-header">
-                <button onclick="newNote()">+ 新建笔记</button>
-                <button class="export" onclick="exportCurrentNote()">📤 导出当前笔记</button>
-                <button class="import" onclick="triggerImport()">📥 导入笔记文件</button>
-                <input type="file" id="importFileInput" accept=".json" style="display:none;">
-            </div>
-            <div id="noteList"></div>
+    <div class="note-sidebar">
+        <div class="note-sidebar-header">
+            <button onclick="newNote()">新建</button>
+            <button class="export" onclick="exportCurrentNote()">导出</button>
+            <button class="import" onclick="triggerImport()">导入</button>
+            <input type="file" id="importFileInput" accept=".json" style="display:none;">
         </div>
-        <div class="note-main">
-            <div class="note-toolbar">
-                <div class="toolbar-group">
-                    <button onclick="cmd('undo')" title="撤销">↶</button>
-                    <button onclick="cmd('redo')" title="重做">↷</button>
-                    <button onclick="cmd('cut')" title="剪切">✂</button>
-                    <button onclick="cmd('copy')" title="复制">📋</button>
-                    <button onclick="cmd('paste')" title="粘贴">📥</button>
-                </div>
-
-                <div class="toolbar-group">
-                    <select onchange="setFontName(this.value)" title="字体">
-                        <option value="">字体</option>
-                        <option value="Arial">Arial</option>
-                        <option value="Microsoft YaHei">微软雅黑</option>
-                        <option value="SimSun">宋体</option>
-                        <option value="SimHei">黑体</option>
-                        <option value="KaiTi">楷体</option>
-                        <option value="FangSong">仿宋</option>
-                        <option value="Courier New">Courier New</option>
-                    </select>
-                    <select onchange="setFontSize(this.value)" title="字号">
-                        <option value="">字号</option>
-                        <option value="1">8px</option>
-                        <option value="2">10px</option>
-                        <option value="3">12px</option>
-                        <option value="4">14px</option>
-                        <option value="5">18px</option>
-                        <option value="6">24px</option>
-                        <option value="7">36px</option>
-                    </select>
-                    <button onclick="cmd('bold')" title="加粗"><b>B</b></button>
-                    <button onclick="cmd('italic')" title="斜体"><i>I</i></button>
-                    <button onclick="cmd('underline')" title="下划线"><u>U</u></button>
-                    <button onclick="cmd('strikeThrough')" title="删除线"><s>S</s></button>
-                    <input type="color" onchange="setColor(this.value)" title="字体颜色">
-                    <input type="color" onchange="setBgColor(this.value)" title="背景色" style="background:#fff;">
-                </div>
-
-                <div class="toolbar-group">
-                    <button onclick="cmd('justifyLeft')" title="左对齐">⬅</button>
-                    <button onclick="cmd('justifyCenter')" title="居中">⬌</button>
-                    <button onclick="cmd('justifyRight')" title="右对齐">➡</button>
-                    <button onclick="cmd('justifyFull')" title="两端对齐">☰</button>
-                    <button onclick="cmd('insertUnorderedList')" title="无序列表">•</button>
-                    <button onclick="cmd('insertOrderedList')" title="有序列表">1.</button>
-                    <button onclick="cmd('outdent')" title="减少缩进">⇤</button>
-                    <button onclick="cmd('indent')" title="增加缩进">⇥</button>
-                </div>
-
-                <div class="toolbar-group">
-                    <button onclick="formatBlock('h1')" title="标题1">H1</button>
-                    <button onclick="formatBlock('h2')" title="标题2">H2</button>
-                    <button onclick="formatBlock('h3')" title="标题3">H3</button>
-                    <button onclick="formatBlock('p')" title="正文">正文</button>
-                    <button onclick="formatBlock('blockquote')" title="引用">❝</button>
-                    <button onclick="insertCodeBlock()" title="代码块">代码</button>
-                    <button onclick="insertTable()" title="表格">⊞</button>
-                    <button onclick="insertLink()" title="超链接">🔗</button>
-                    <button onclick="insertImage()" title="插入图片">🖼</button>
-                    <button onclick="insertHr()" title="分隔线">—</button>
-                </div>
-
-                <div class="toolbar-group">
-                    <button onclick="clearFormat()" title="清除格式">清除格式</button>
-                    <button onclick="cmd('removeFormat')" title="清除所有样式">✕</button>
-                </div>
-
-                <div class="toolbar-group">
-                    <button onclick="openFindReplace()" title="查找替换">🔍 查找替换</button>
-                    <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
-                </div>
-            </div>
-            <div id="noteEditor" contenteditable="true"></div>
-            <div id="noteStatus">
-                <span class="left" id="noteStatusLeft">—</span>
-                <span id="noteStatusRight">自动保存中...</span>
-            </div>
+        <div id="noteList"></div>
+    </div>
+    <div class="note-main">
+        <div class="note-toolbar">
+            <button onclick="cmd('bold')">加粗</button>
+            <button onclick="cmd('italic')">斜体</button>
+            <button onclick="cmd('underline')">下划线</button>
+            <button onclick="cmd('insertUnorderedList')">列表</button>
+            <button onclick="cmd('justifyLeft')">左对齐</button>
+            <button onclick="cmd('justifyCenter')">居中</button>
+            <button onclick="cmd('justifyRight')">右对齐</button>
+            <select onchange="setFontSize(this.value)">
+                <option value="">字体大小</option>
+                <option value="2">小</option>
+                <option value="4">中</option>
+                <option value="6">大</option>
+            </select>
+            <input type="color" onchange="setColor(this.value)">
+            <button onclick="formatBlock('h1')">H1</button>
+            <button onclick="formatBlock('h2')">H2</button>
+            <button onclick="formatBlock('blockquote')">引用</button>
+            <button onclick="insertCodeBlock()">代码</button>
+            <button onclick="clearFormat()">清除格式</button>
+            <button onclick="insertTable()">表格</button>
+            <button onclick="insertLink()">链接</button>
+            <button onclick="openFindReplace()">查找替换</button>
+            <button onclick="exportPDF()">导出 PDF</button>
+        </div>
+        <div id="noteEditor" contenteditable="true"></div>
+        <div id="noteStatus">
+            <span class="left" id="noteStatusLeft">—</span>
+            <span id="noteStatusRight">自动保存中...</span>
         </div>
     </div>
-</div>
-
 </div>
 
 <!-- 查找替换弹窗 -->
@@ -1068,41 +823,17 @@ const apiEndpoints = {
         parse: (data) => data[0].map(item => item[0]).join(''),
         detectLang: (data) => data[2] || null
     },
-    googleapis_alt: {
-        name: '接口2: translate.googleapis.com (备用参数)',
-        build: (text, lang) => `https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl=auto&tl=${lang}&q=${encodeURIComponent(text)}`,
-        parse: (data) => data[0].map(item => item[0]).join(''),
-        detectLang: (data) => data[2] || null
-    },
     googlecn: {
-        name: '接口3: translate.google.cn',
+        name: '接口2: translate.google.cn',
         build: (text, lang) => `https://translate.google.cn/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
         parse: (data) => data[0].map(item => item[0]).join(''),
         detectLang: (data) => data[2] || null
     },
     googlecom: {
-        name: '接口4: translate.google.com',
+        name: '接口3: translate.google.com',
         build: (text, lang) => `https://translate.google.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
         parse: (data) => data[0].map(item => item[0]).join(''),
         detectLang: (data) => data[2] || null
-    },
-    googleapis_dict: {
-        name: '接口5: translate.googleapis.com (词典模式)',
-        build: (text, lang) => `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&dt=bd&dj=1&q=${encodeURIComponent(text)}`,
-        parse: (data) => {
-            if (data.sentences) return data.sentences.map(s => s.trans).join('');
-            return data[0].map(item => item[0]).join('');
-        },
-        detectLang: (data) => data.src || null
-    },
-    googlecom_dict: {
-        name: '接口6: translate.google.com (词典模式)',
-        build: (text, lang) => `https://translate.google.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&dt=bd&dj=1&q=${encodeURIComponent(text)}`,
-        parse: (data) => {
-            if (data.sentences) return data.sentences.map(s => s.trans).join('');
-            return data[0].map(item => item[0]).join('');
-        },
-        detectLang: (data) => data.src || null
     }
 };
 
@@ -1150,7 +881,6 @@ function initSearchableSelects() {
             dropdown.classList.add('open');
             input.select();
         };
-
         const closeDropdown = () => {
             dropdown.classList.remove('open');
             input.value = languages[hidden.value] || hidden.value;
@@ -1158,17 +888,14 @@ function initSearchableSelects() {
 
         input.addEventListener('focus', openDropdown);
         input.addEventListener('click', openDropdown);
-
         input.addEventListener('input', () => {
             if (!dropdown.classList.contains('open')) dropdown.classList.add('open');
             renderDropdown(input.value);
         });
-
         input.addEventListener('keydown', (e) => {
             const items = dropdown.querySelectorAll('.dropdown-item');
             const active = dropdown.querySelector('.dropdown-item.active');
             let idx = Array.from(items).indexOf(active);
-
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 idx = idx < items.length - 1 ? idx + 1 : 0;
@@ -1188,7 +915,6 @@ function initSearchableSelects() {
                 input.blur();
             }
         });
-
         dropdown.addEventListener('click', (e) => {
             const item = e.target.closest('.dropdown-item');
             if (!item) return;
@@ -1198,7 +924,6 @@ function initSearchableSelects() {
             dropdown.classList.remove('open');
             translateText();
         });
-
         document.addEventListener('click', (e) => {
             if (!wrap.contains(e.target)) closeDropdown();
         });
@@ -1238,7 +963,6 @@ async function testApi() {
         setApiStatus(ok ? 'ok' : 'fail');
         return ok;
     } catch (e) {
-        console.error('接口检测失败:', e);
         setApiStatus('fail');
         return false;
     }
@@ -1263,7 +987,6 @@ async function translateTo(text, targetLang){
         setApiStatus('ok');
         return result || '翻译失败';
     } catch(e) {
-        console.error('翻译请求失败:', e);
         setApiStatus('fail');
         return '翻译失败';
     }
@@ -1314,7 +1037,7 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
 testApi();
 
 /* ============================================================
-   货币换算模块
+   货币换算
 ============================================================ */
 const currencyList = {
     "USD":"美元","CNY":"人民币","EUR":"欧元","GBP":"英镑","JPY":"日元",
@@ -1393,20 +1116,13 @@ function initCurrencySearch(inputId, hiddenId, dropdownId, defaultCode, flagId) 
             dropdown.innerHTML = entries.slice(0, 100).map(([code, name]) =>
                 `<div class="currency-dropdown-item${code === hidden.value ? ' selected' : ''}" data-code="${code}">
                     <div class="mini-flag">${currencyFlags[code] || code.substring(0,2)}</div>
-                    <div class="mini-info">
-                        <div class="mini-code">${code} - ${name}</div>
-                    </div>
+                    <div class="mini-info"><div class="mini-code">${code} - ${name}</div></div>
                 </div>`
             ).join('');
         }
     };
 
-    const openDropdown = () => {
-        renderDropdown('');
-        dropdown.classList.add('open');
-        input.select();
-    };
-
+    const openDropdown = () => { renderDropdown(''); dropdown.classList.add('open'); input.select(); };
     const closeDropdown = () => {
         dropdown.classList.remove('open');
         input.value = `${hidden.value} - ${currencyList[hidden.value] || ''}`;
@@ -1418,12 +1134,10 @@ function initCurrencySearch(inputId, hiddenId, dropdownId, defaultCode, flagId) 
         if (!dropdown.classList.contains('open')) dropdown.classList.add('open');
         renderDropdown(input.value);
     });
-
     input.addEventListener('keydown', (e) => {
         const items = dropdown.querySelectorAll('.currency-dropdown-item');
         const active = dropdown.querySelector('.currency-dropdown-item.active');
         let idx = Array.from(items).indexOf(active);
-
         if (e.key === 'ArrowDown') {
             e.preventDefault();
             idx = idx < items.length - 1 ? idx + 1 : 0;
@@ -1438,12 +1152,8 @@ function initCurrencySearch(inputId, hiddenId, dropdownId, defaultCode, flagId) 
             e.preventDefault();
             if (active) active.click();
             else if (items.length > 0) items[0].click();
-        } else if (e.key === 'Escape') {
-            closeDropdown();
-            input.blur();
-        }
+        } else if (e.key === 'Escape') { closeDropdown(); input.blur(); }
     });
-
     dropdown.addEventListener('click', (e) => {
         const item = e.target.closest('.currency-dropdown-item');
         if (!item) return;
@@ -1454,7 +1164,6 @@ function initCurrencySearch(inputId, hiddenId, dropdownId, defaultCode, flagId) 
         dropdown.classList.remove('open');
         convertCurrency();
     });
-
     document.addEventListener('click', (e) => {
         if (!input.parentElement.contains(e.target)) closeDropdown();
     });
@@ -1510,22 +1219,19 @@ async function convertCurrency() {
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
-            if (!data[from]) throw new Error('返回数据中没有 ' + from + ' 字段');
+            if (!data[from]) throw new Error('无 ' + from + ' 数据');
             lastRates = data[from];
             lastBase = from;
             const updateTime = data.date || '';
             document.getElementById('currencyUpdateTime').textContent = '更新时间：' + updateTime;
             renderCommonRates(lastRates);
         }
-
         const rate = lastRates[to];
-        if (!rate) throw new Error('未找到 ' + toUpper + ' 的汇率');
-
+        if (!rate) throw new Error('未找到 ' + toUpper + ' 汇率');
         const converted = (amount * rate).toFixed(4);
         resultEl.textContent = `${amount.toLocaleString()} ${fromUpper} = ${converted} ${toUpper}`;
         detailEl.textContent = `1 ${fromUpper} = ${rate.toFixed(4)} ${toUpper}   ·   1 ${toUpper} = ${(1/rate).toFixed(4)} ${fromUpper}`;
     } catch (e) {
-        console.error('汇率请求失败:', e);
         resultEl.textContent = '汇率加载失败';
         detailEl.textContent = '错误：' + e.message;
     }
@@ -1535,9 +1241,7 @@ function renderCommonRates(rates) {
     const container = document.getElementById('commonRates');
     const from = document.getElementById('currencyFrom').value;
     if (!lastRates) return;
-    const displayPairs = [
-        [from, 'USD'], [from, 'BRL'], [from, 'GBP'], [from, 'EUR']
-    ];
+    const displayPairs = [[from, 'USD'], [from, 'BRL'], [from, 'GBP'], [from, 'EUR']];
     container.innerHTML = '';
     displayPairs.forEach(([base, target]) => {
         const rate = lastRates[target.toLowerCase()];
@@ -1548,7 +1252,6 @@ function renderCommonRates(rates) {
             <div class="pair">${base} / ${target}</div>
             <div class="value">1 ${base} = ${rate.toFixed(4)} ${target}</div>
             <div class="reverse">1 ${target} = ${(1/rate).toFixed(4)} ${base}</div>
-            <div class="arrow">›</div>
         `;
         card.addEventListener('click', () => {
             document.getElementById('currencyFrom').value = base;
@@ -1564,7 +1267,7 @@ function renderCommonRates(rates) {
 }
 
 /* ============================================================
-   二维码模块
+   二维码
 ============================================================ */
 let currentQrBlobUrl = null;
 let currentQrFilename = 'qrcode.png';
@@ -1573,28 +1276,19 @@ document.getElementById('qrcodeGenerate').addEventListener('click', () => {
     const text = document.getElementById('qrcodeText').value.trim();
     const display = document.getElementById('qrcodeDisplay');
     const downloadBtn = document.getElementById('qrcodeDownload');
-
     if (!text) {
         display.innerHTML = '<div class="placeholder">请输入链接或文本</div>';
         downloadBtn.disabled = true;
         return;
     }
-
     const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(text)}`;
     display.innerHTML = `<img src="${url}" alt="二维码" crossorigin="anonymous">`;
-
-    fetch(url)
-        .then(res => res.blob())
-        .then(blob => {
-            if (currentQrBlobUrl) URL.revokeObjectURL(currentQrBlobUrl);
-            currentQrBlobUrl = URL.createObjectURL(blob);
-            currentQrFilename = 'qrcode_' + Date.now() + '.png';
-            downloadBtn.disabled = false;
-        })
-        .catch(err => {
-            console.error('二维码下载准备失败:', err);
-            downloadBtn.disabled = true;
-        });
+    fetch(url).then(res => res.blob()).then(blob => {
+        if (currentQrBlobUrl) URL.revokeObjectURL(currentQrBlobUrl);
+        currentQrBlobUrl = URL.createObjectURL(blob);
+        currentQrFilename = 'qrcode_' + Date.now() + '.png';
+        downloadBtn.disabled = false;
+    }).catch(() => { downloadBtn.disabled = true; });
 });
 
 document.getElementById('qrcodeDownload').addEventListener('click', () => {
@@ -1611,10 +1305,7 @@ document.getElementById('qrcodeClear').addEventListener('click', () => {
     document.getElementById('qrcodeText').value = '';
     document.getElementById('qrcodeDisplay').innerHTML = '<div class="placeholder">输入链接或文本后自动生成二维码</div>';
     document.getElementById('qrcodeDownload').disabled = true;
-    if (currentQrBlobUrl) {
-        URL.revokeObjectURL(currentQrBlobUrl);
-        currentQrBlobUrl = null;
-    }
+    if (currentQrBlobUrl) { URL.revokeObjectURL(currentQrBlobUrl); currentQrBlobUrl = null; }
 });
 
 /* ============================================================
@@ -1674,54 +1365,38 @@ function removeNote(id) {
     store.delete(id);
 }
 
-/* ===== 富文本命令 ===== */
-function cmd(command, value = null) {
-    document.execCommand(command, false, value);
+function cmd(command) {
+    document.execCommand(command, false, null);
     updateNoteStatus();
 }
-
-function setFontName(name) {
-    if (name) { document.execCommand("fontName", false, name); updateNoteStatus(); }
-}
-
 function setFontSize(size) {
     if (size) { document.execCommand("fontSize", false, size); updateNoteStatus(); }
 }
-
-function setColor(color) { document.execCommand("foreColor", false, color); updateNoteStatus(); }
-function setBgColor(color) { document.execCommand("hiliteColor", false, color); updateNoteStatus(); }
-function formatBlock(tag) { document.execCommand("formatBlock", false, tag); updateNoteStatus(); }
-function clearFormat() { document.execCommand("removeFormat", false, null); updateNoteStatus(); }
-
+function setColor(color) {
+    document.execCommand("foreColor", false, color);
+    updateNoteStatus();
+}
+function formatBlock(tag) {
+    document.execCommand("formatBlock", false, tag);
+    updateNoteStatus();
+}
+function clearFormat() {
+    document.execCommand("removeFormat", false, null);
+    updateNoteStatus();
+}
 function insertCodeBlock() {
     const html = `<pre><code>代码</code></pre>`;
     document.execCommand("insertHTML", false, html);
     updateNoteStatus();
 }
-
 function insertTable() {
-    const html = `
-    <table>
-        <tr><th>标题1</th><th>标题2</th></tr>
-        <tr><td>内容</td><td>内容</td></tr>
-    </table>`;
+    const html = `<table><tr><th>标题1</th><th>标题2</th></tr><tr><td>内容</td><td>内容</td></tr></table>`;
     document.execCommand("insertHTML", false, html);
     updateNoteStatus();
 }
-
 function insertLink() {
     const url = prompt("输入链接");
     if (url) { document.execCommand("createLink", false, url); updateNoteStatus(); }
-}
-
-function insertImage() {
-    const url = prompt("输入图片链接");
-    if (url) { document.execCommand("insertImage", false, url); updateNoteStatus(); }
-}
-
-function insertHr() {
-    document.execCommand("insertHorizontalRule", false, null);
-    updateNoteStatus();
 }
 
 function updateNoteStatus() {
@@ -1734,18 +1409,12 @@ function updateNoteStatus() {
 }
 
 function createNote() {
-    const note = {
-        id: Date.now(),
-        title: "未命名笔记",
-        content: "",
-        customTitle: false
-    };
+    const note = { id: Date.now(), title: "未命名笔记", content: "", customTitle: false };
     notes.unshift(note);
     saveNote(note);
     renderNoteList();
     openNote(note.id);
 }
-
 function newNote() { createNote(); }
 
 function openNote(id) {
@@ -1770,7 +1439,6 @@ function saveCurrent() {
     updateNoteStatus();
 }
 
-/* 重命名（接收 id 参数） */
 function renameNote(id) {
     const note = notes.find(n => n.id === id);
     if (!note) return;
@@ -1782,7 +1450,6 @@ function renameNote(id) {
     renderNoteList();
 }
 
-/* 删除（接收 id 参数） */
 function deleteNote(id) {
     if (!confirm("删除当前笔记？")) return;
     notes = notes.filter(n => n.id !== id);
@@ -1791,7 +1458,6 @@ function deleteNote(id) {
     else openNote(notes[0].id);
 }
 
-/* 渲染笔记列表：悬停显示重命名/删除按钮 */
 function renderNoteList() {
     noteListEl.innerHTML = "";
     notes.forEach(note => {
@@ -1821,26 +1487,16 @@ function renderNoteList() {
 
         actions.appendChild(renameBtn);
         actions.appendChild(deleteBtn);
-
         div.appendChild(titleSpan);
         div.appendChild(actions);
         noteListEl.appendChild(div);
     });
 }
 
-/* ===== 导出笔记为 JSON 文件 ===== */
 function exportCurrentNote() {
     const note = notes.find(n => n.id === currentId);
-    if (!note) {
-        alert('没有可导出的笔记');
-        return;
-    }
-    const data = {
-        version: 1,
-        title: note.title,
-        content: note.content,
-        exportedAt: new Date().toISOString()
-    };
+    if (!note) { alert('没有可导出的笔记'); return; }
+    const data = { version: 1, title: note.title, content: note.content, exportedAt: new Date().toISOString() };
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1854,89 +1510,45 @@ function exportCurrentNote() {
     URL.revokeObjectURL(url);
 }
 
-/* ===== 导出 PDF（用打印功能） ===== */
 function exportPDF() {
     const note = notes.find(n => n.id === currentId);
-    if (!note) {
-        alert('没有可导出的笔记');
-        return;
-    }
-    // 打开新窗口，写入笔记内容，调用打印
+    if (!note) { alert('没有可导出的笔记'); return; }
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>${note.title}</title>
-            <style>
-                body {
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
-                    padding: 40px;
-                    line-height: 1.7;
-                    color: #333;
-                }
-                img { max-width: 100%; height: auto; }
-                table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-                td, th { border: 1px solid #ccc; padding: 8px; }
-                blockquote { border-left: 4px solid #ccc; margin: 10px 0; padding: 10px; background: #f8f8f8; }
-                pre { background: #f4f4f4; padding: 12px; border-radius: 8px; overflow-x: auto; }
-                h1 { font-size: 24px; margin-top: 24px; }
-                h2 { font-size: 20px; margin-top: 20px; }
-                h3 { font-size: 17px; margin-top: 16px; }
-            </style>
-        </head>
-        <body>
-            <h1>${note.title}</h1>
-            <hr>
-            ${note.content}
-        </body>
-        </html>
+        <!DOCTYPE html><html><head><meta charset="UTF-8"><title>${note.title}</title>
+        <style>body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",Arial,sans-serif;padding:40px;line-height:1.7;color:#333;}
+        img{max-width:100%;height:auto;}table{border-collapse:collapse;width:100%;margin:10px 0;}td,th{border:1px solid #ccc;padding:8px;}
+        blockquote{border-left:4px solid #ccc;margin:10px 0;padding:10px;background:#f8f8f8;}pre{background:#f4f4f4;padding:12px;border-radius:8px;overflow-x:auto;}</style>
+        </head><body><h1>${note.title}</h1><hr>${note.content}</body></html>
     `);
     printWindow.document.close();
-    // 等图片加载完再打印
-    setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-    }, 500);
+    setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
 }
 
-/* ===== 查找替换 ===== */
 function openFindReplace() {
     document.getElementById('findReplaceModal').classList.add('open');
     document.getElementById('findText').focus();
 }
-
 function closeFindReplace() {
     document.getElementById('findReplaceModal').classList.remove('open');
     document.getElementById('findText').value = '';
     document.getElementById('replaceText').value = '';
 }
-
 function doReplaceAll() {
     const find = document.getElementById('findText').value;
     const replace = document.getElementById('replaceText').value;
-    if (!find) {
-        alert('请输入要查找的内容');
-        return;
-    }
-    // 提取纯文本内容，执行替换
+    if (!find) { alert('请输入要查找的内容'); return; }
     const content = noteEditor.innerHTML;
-    // 用正则全局替换（转义特殊字符）
     const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(escapeRegExp(find), 'g');
     const count = (content.match(regex) || []).length;
-    if (count === 0) {
-        alert('未找到「' + find + '」');
-        return;
-    }
+    if (count === 0) { alert('未找到「' + find + '」'); return; }
     noteEditor.innerHTML = content.replace(regex, replace);
     saveCurrent();
     closeFindReplace();
     alert(`已替换 ${count} 处`);
 }
 
-/* ===== 触发导入文件选择 ===== */
 function triggerImport() {
     document.getElementById('importFileInput').click();
 }
@@ -1944,28 +1556,18 @@ function triggerImport() {
 document.getElementById('importFileInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = function(event) {
         try {
             const data = JSON.parse(event.target.result);
-            if (!data.title && !data.content) {
-                alert('文件格式不正确：缺少 title 或 content');
-                return;
-            }
-            const note = {
-                id: Date.now(),
-                title: (data.title || '导入笔记') + '（导入）',
-                content: data.content || '',
-                customTitle: true
-            };
+            if (!data.title && !data.content) { alert('文件格式不正确'); return; }
+            const note = { id: Date.now(), title: (data.title || '导入笔记') + '（导入）', content: data.content || '', customTitle: true };
             notes.unshift(note);
             saveNote(note);
             renderNoteList();
             openNote(note.id);
             alert(`导入成功：${note.title}`);
         } catch (err) {
-            console.error('导入失败:', err);
             alert('导入失败：文件不是有效的 JSON 格式');
         }
         e.target.value = '';
@@ -1973,18 +1575,14 @@ document.getElementById('importFileInput').addEventListener('change', function(e
     reader.readAsText(file);
 });
 
-/* ===== 自动保存 ===== */
 let saveTimer = null;
 noteEditor.addEventListener("input", () => {
     noteStatusRight.textContent = '✍️ 编辑中...';
     noteStatusRight.style.color = '#ff9800';
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-        saveCurrent();
-    }, 300);
+    saveTimer = setTimeout(() => { saveCurrent(); }, 500);
 });
 
-/* ===== 图片粘贴 ===== */
 noteEditor.addEventListener("paste", (e) => {
     const items = e.clipboardData.items;
     for (let item of items) {
@@ -2002,15 +1600,11 @@ noteEditor.addEventListener("paste", (e) => {
     }
 });
 
-/* ===== 链接 Ctrl+点击打开 ===== */
 noteEditor.addEventListener("click", (e) => {
     const link = e.target.closest("a");
-    if (link && e.ctrlKey) {
-        window.open(link.href, "_blank");
-    }
+    if (link && e.ctrlKey) { window.open(link.href, "_blank"); }
 });
 
-/* ===== 左侧宽度记忆 ===== */
 let resizeTimer;
 noteSidebar.addEventListener("mouseup", () => {
     clearTimeout(resizeTimer);
@@ -2019,7 +1613,6 @@ noteSidebar.addEventListener("mouseup", () => {
     }, 100);
 });
 
-/* ===== 初始化货币换算 ===== */
 window.addEventListener('load', () => {
     convertCurrency();
 });
