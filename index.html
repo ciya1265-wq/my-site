@@ -517,7 +517,8 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 /* ========== 笔记面板 ========== */
 #notePanel {
     display: flex;
-    height: 640px;
+    height: calc(100vh - 180px);
+    min-height: 500px;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     overflow: hidden;
@@ -557,17 +558,48 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 .note-sidebar-header button.import:hover { background: #f57c00; }
 
 #noteList { flex: 1; overflow: auto; }
+
+/* 笔记列表项：悬停显示重命名/删除按钮 */
 .note-item {
     padding: 12px;
     border-bottom: 1px solid #eee;
     cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
 }
 .note-item:hover { background: #f0f0f0; }
 .note-item.active { background: #e6f0ff; }
+
+.note-item-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-item-actions {
+    display: none;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.note-item:hover .note-item-actions {
+    display: flex;
+}
+.note-action-btn {
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 4px;
+    opacity: 0.7;
+    user-select: none;
+}
+.note-action-btn:hover {
+    opacity: 1;
+    background: #e0e0e0;
+}
 
 .note-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -619,22 +651,34 @@ button:disabled { background: #aaa; cursor: not-allowed; }
 
 #noteEditor {
     flex: 1;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 25px;
     background: #fff;
     outline: none;
     line-height: 1.6;
     font-size: 15px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+    word-break: break-word;
 }
 #noteEditor img {
     max-width: 100%;
+    height: auto;
     margin: 10px 0;
     border-radius: 8px;
     display: block;
 }
-#noteEditor table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-#noteEditor td, #noteEditor th { border: 1px solid #ccc; padding: 8px; }
+#noteEditor table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0;
+    table-layout: fixed;
+}
+#noteEditor td, #noteEditor th {
+    border: 1px solid #ccc;
+    padding: 8px;
+    word-break: break-word;
+}
 #noteEditor blockquote {
     border-left: 4px solid #ccc;
     margin: 10px 0;
@@ -645,9 +689,15 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     background: #f4f4f4;
     padding: 12px;
     border-radius: 8px;
-    overflow: auto;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
-#noteEditor a { color: #2563eb; text-decoration: underline; }
+#noteEditor a {
+    color: #2563eb;
+    text-decoration: underline;
+    word-break: break-all;
+}
 
 #noteStatus {
     padding: 4px 10px;
@@ -661,6 +711,53 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     align-items: center;
 }
 #noteStatus .left { color: #999; }
+
+/* 查找替换弹窗 */
+#findReplaceModal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+#findReplaceModal.open { display: flex; }
+.find-modal-box {
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 12px;
+    min-width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.find-modal-box h4 { margin: 0 0 14px 0; font-size: 16px; }
+.find-modal-row { margin-bottom: 10px; }
+.find-modal-row label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+.find-modal-row input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+.find-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+.find-modal-actions button {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+}
+.find-modal-actions .btn-primary { background: #1976d2; color: #fff; }
+.find-modal-actions .btn-primary:hover { background: #1565c0; }
+.find-modal-actions .btn-secondary { background: #e0e0e0; color: #333; }
+.find-modal-actions .btn-secondary:hover { background: #d0d0d0; }
 </style>
 </head>
 <body>
@@ -881,6 +978,11 @@ button:disabled { background: #aaa; cursor: not-allowed; }
                     <button onclick="clearFormat()" title="清除格式">清除格式</button>
                     <button onclick="cmd('removeFormat')" title="清除所有样式">✕</button>
                 </div>
+
+                <div class="toolbar-group">
+                    <button onclick="openFindReplace()" title="查找替换">🔍 查找替换</button>
+                    <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
+                </div>
             </div>
             <div id="noteEditor" contenteditable="true"></div>
             <div id="noteStatus">
@@ -891,6 +993,25 @@ button:disabled { background: #aaa; cursor: not-allowed; }
     </div>
 </div>
 
+</div>
+
+<!-- 查找替换弹窗 -->
+<div id="findReplaceModal">
+    <div class="find-modal-box">
+        <h4>查找替换</h4>
+        <div class="find-modal-row">
+            <label>查找内容</label>
+            <input type="text" id="findText" placeholder="输入要查找的内容">
+        </div>
+        <div class="find-modal-row">
+            <label>替换为</label>
+            <input type="text" id="replaceText" placeholder="输入替换后的内容">
+        </div>
+        <div class="find-modal-actions">
+            <button class="btn-secondary" onclick="closeFindReplace()">取消</button>
+            <button class="btn-primary" onclick="doReplaceAll()">全部替换</button>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1193,7 +1314,7 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
 testApi();
 
 /* ============================================================
-   货币换算模块（全币种，使用 latest.currency-api.pages.dev）
+   货币换算模块
 ============================================================ */
 const currencyList = {
     "USD":"美元","CNY":"人民币","EUR":"欧元","GBP":"英镑","JPY":"日元",
@@ -1361,7 +1482,6 @@ document.getElementById('swapBtn').addEventListener('click', () => {
 let lastRates = null;
 let lastBase = null;
 
-/* ====== 换算函数（全币种，使用 latest.currency-api.pages.dev） ====== */
 async function convertCurrency() {
     const amountInput = document.getElementById('currencyAmount');
     const amount = parseFloat(amountInput.value);
@@ -1372,7 +1492,6 @@ async function convertCurrency() {
     const resultEl = document.getElementById('currencyResult');
     const detailEl = document.getElementById('currencyRateDetail');
 
-    // 金额为空时只显示汇率
     if (isNaN(amount) || amountInput.value.trim() === '') {
         if (lastRates && lastRates[to]) {
             const rate = lastRates[to];
@@ -1387,21 +1506,13 @@ async function convertCurrency() {
 
     try {
         if (!lastRates || lastBase !== from) {
-            // 使用 currency-api（jsDelivr，支持 CORS，支持全币种）
             const url = `https://latest.currency-api.pages.dev/v1/currencies/${from}.json`;
-            console.log('正在请求汇率:', url);
-
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
             const data = await res.json();
-            console.log('汇率返回数据:', data);
-
             if (!data[from]) throw new Error('返回数据中没有 ' + from + ' 字段');
-
-            lastRates = data[from];  // {usd: 0.14, eur: 0.13, ...}
+            lastRates = data[from];
             lastBase = from;
-
             const updateTime = data.date || '';
             document.getElementById('currencyUpdateTime').textContent = '更新时间：' + updateTime;
             renderCommonRates(lastRates);
@@ -1507,7 +1618,7 @@ document.getElementById('qrcodeClear').addEventListener('click', () => {
 });
 
 /* ============================================================
-   笔记模块（导出/导入 JSON 文件）
+   笔记模块
 ============================================================ */
 let db;
 const request = indexedDB.open("NotesDB", 1);
@@ -1536,7 +1647,6 @@ const noteStatusRight = document.getElementById("noteStatusRight");
 const savedWidth = localStorage.getItem("sidebar_width");
 if (savedWidth) noteSidebar.style.width = savedWidth;
 
-/* ===== 加载笔记 ===== */
 function loadNotes() {
     const tx = db.transaction(["notes"], "readonly");
     const store = tx.objectStore("notes");
@@ -1614,7 +1724,6 @@ function insertHr() {
     updateNoteStatus();
 }
 
-/* ===== 状态栏更新 ===== */
 function updateNoteStatus() {
     const text = noteEditor.innerText || '';
     const chars = text.length;
@@ -1624,7 +1733,6 @@ function updateNoteStatus() {
     noteStatusRight.style.color = '#4caf50';
 }
 
-/* ===== 创建 / 打开 / 保存 ===== */
 function createNote() {
     const note = {
         id: Date.now(),
@@ -1662,8 +1770,9 @@ function saveCurrent() {
     updateNoteStatus();
 }
 
-function renameNote() {
-    const note = notes.find(n => n.id === currentId);
+/* 重命名（接收 id 参数） */
+function renameNote(id) {
+    const note = notes.find(n => n.id === id);
     if (!note) return;
     const name = prompt("输入新名称", note.title);
     if (name === null) return;
@@ -1673,22 +1782,48 @@ function renameNote() {
     renderNoteList();
 }
 
-function deleteNote() {
+/* 删除（接收 id 参数） */
+function deleteNote(id) {
     if (!confirm("删除当前笔记？")) return;
-    notes = notes.filter(n => n.id !== currentId);
-    removeNote(currentId);
+    notes = notes.filter(n => n.id !== id);
+    removeNote(id);
     if (notes.length === 0) createNote();
     else openNote(notes[0].id);
 }
 
+/* 渲染笔记列表：悬停显示重命名/删除按钮 */
 function renderNoteList() {
     noteListEl.innerHTML = "";
     notes.forEach(note => {
         const div = document.createElement("div");
         div.className = "note-item";
         if (note.id === currentId) div.classList.add("active");
-        div.innerHTML = `<span>${note.title}</span>`;
-        div.onclick = () => openNote(note.id);
+
+        const titleSpan = document.createElement("span");
+        titleSpan.className = "note-item-title";
+        titleSpan.innerText = note.title;
+        titleSpan.onclick = () => openNote(note.id);
+
+        const actions = document.createElement("span");
+        actions.className = "note-item-actions";
+
+        const renameBtn = document.createElement("span");
+        renameBtn.className = "note-action-btn";
+        renameBtn.title = "重命名";
+        renameBtn.innerText = "✏️";
+        renameBtn.onclick = (e) => { e.stopPropagation(); renameNote(note.id); };
+
+        const deleteBtn = document.createElement("span");
+        deleteBtn.className = "note-action-btn";
+        deleteBtn.title = "删除";
+        deleteBtn.innerText = "🗑️";
+        deleteBtn.onclick = (e) => { e.stopPropagation(); deleteNote(note.id); };
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(deleteBtn);
+
+        div.appendChild(titleSpan);
+        div.appendChild(actions);
         noteListEl.appendChild(div);
     });
 }
@@ -1719,12 +1854,93 @@ function exportCurrentNote() {
     URL.revokeObjectURL(url);
 }
 
+/* ===== 导出 PDF（用打印功能） ===== */
+function exportPDF() {
+    const note = notes.find(n => n.id === currentId);
+    if (!note) {
+        alert('没有可导出的笔记');
+        return;
+    }
+    // 打开新窗口，写入笔记内容，调用打印
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>${note.title}</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+                    padding: 40px;
+                    line-height: 1.7;
+                    color: #333;
+                }
+                img { max-width: 100%; height: auto; }
+                table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+                td, th { border: 1px solid #ccc; padding: 8px; }
+                blockquote { border-left: 4px solid #ccc; margin: 10px 0; padding: 10px; background: #f8f8f8; }
+                pre { background: #f4f4f4; padding: 12px; border-radius: 8px; overflow-x: auto; }
+                h1 { font-size: 24px; margin-top: 24px; }
+                h2 { font-size: 20px; margin-top: 20px; }
+                h3 { font-size: 17px; margin-top: 16px; }
+            </style>
+        </head>
+        <body>
+            <h1>${note.title}</h1>
+            <hr>
+            ${note.content}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    // 等图片加载完再打印
+    setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+    }, 500);
+}
+
+/* ===== 查找替换 ===== */
+function openFindReplace() {
+    document.getElementById('findReplaceModal').classList.add('open');
+    document.getElementById('findText').focus();
+}
+
+function closeFindReplace() {
+    document.getElementById('findReplaceModal').classList.remove('open');
+    document.getElementById('findText').value = '';
+    document.getElementById('replaceText').value = '';
+}
+
+function doReplaceAll() {
+    const find = document.getElementById('findText').value;
+    const replace = document.getElementById('replaceText').value;
+    if (!find) {
+        alert('请输入要查找的内容');
+        return;
+    }
+    // 提取纯文本内容，执行替换
+    const content = noteEditor.innerHTML;
+    // 用正则全局替换（转义特殊字符）
+    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapeRegExp(find), 'g');
+    const count = (content.match(regex) || []).length;
+    if (count === 0) {
+        alert('未找到「' + find + '」');
+        return;
+    }
+    noteEditor.innerHTML = content.replace(regex, replace);
+    saveCurrent();
+    closeFindReplace();
+    alert(`已替换 ${count} 处`);
+}
+
 /* ===== 触发导入文件选择 ===== */
 function triggerImport() {
     document.getElementById('importFileInput').click();
 }
 
-/* ===== 处理导入文件 ===== */
 document.getElementById('importFileInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
