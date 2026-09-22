@@ -13,7 +13,6 @@ body {
     color: #333;
 }
 
-/* ===== 顶部标签栏（减少上下内边距） ===== */
 #tabBar {
     display: flex;
     flex-wrap: wrap;
@@ -39,7 +38,6 @@ body {
 }
 .tab-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
 .tab-btn.active { color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
-
 .tab-btn[data-tab="tab-translate"] { background: #4a90e2; color: #fff; }
 .tab-btn[data-tab="tab-translate"]:not(.active) { background: #e3f0ff; color: #1976d2; }
 .tab-btn[data-tab="tab-currency"] { background: #4caf50; color: #fff; }
@@ -49,11 +47,9 @@ body {
 .tab-btn[data-tab="tab-note"] { background: #9c27b0; color: #fff; }
 .tab-btn[data-tab="tab-note"]:not(.active) { background: #f3e5f5; color: #6a1b9a; }
 
-/* ===== 面板区 ===== */
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-/* ===== 非笔记面板：居中（减少首尾空白） ===== */
 .panel-container {
     max-width: 960px;
     margin: 0 auto;
@@ -186,9 +182,9 @@ body {
     background: transparent;
     cursor: pointer;
 }
-#wrapToggleBtn.active-toggle {
-    background: #ffe0b2;
-    color: #e65100;
+.note-toolbar .active-toggle {
+    background: #ffe0b2 !important;
+    color: #e65100 !important;
 }
 
 #noteEditor {
@@ -265,8 +261,8 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 10px;         /* ← 缩小 */
-    padding: 8px 12px;           /* ← 缩小 */
+    margin-bottom: 10px;
+    padding: 8px 12px;
     background: #f8f9fa;
     border-radius: 8px;
     border: 1px solid #e0e0e0;
@@ -304,10 +300,10 @@ body {
 .status-badge.status-testing { background: #fff3e0; color: #e65100; }
 .status-badge.status-testing::before { background: #ff9800; }
 
-#inputContainer { display: flex; gap: 10px; margin-bottom: 8px; }   /* ← 缩小 */
+#inputContainer { display: flex; gap: 10px; margin-bottom: 8px; }
 textarea {
     flex: 1;
-    height: 150px;       /* ← 保持不变 */
+    height: 150px;
     padding: 12px;
     font-size: 16px;
     border-radius: 8px;
@@ -326,7 +322,7 @@ textarea {
 #detectedLang {
     font-size: 13px;
     color: #666;
-    margin-bottom: 8px;          /* ← 缩小 */
+    margin-bottom: 8px;
     padding: 4px 8px;
     background: #f0f7ff;
     border-radius: 6px;
@@ -339,7 +335,7 @@ textarea {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
-    margin-bottom: 10px;         /* ← 缩小 */
+    margin-bottom: 10px;
 }
 .lang-select-wrap { position: relative; display: flex; flex-direction: column; gap: 4px; }
 .lang-select-wrap label { font-size: 13px; font-weight: bold; color: #555; }
@@ -397,7 +393,7 @@ textarea {
 }
 .translation-header button:hover { background: #45a049; }
 .result-card {
-    height: 280px;       /* ← 保持不变 */
+    height: 280px;
     overflow-y: auto;
     padding: 8px;
     border: 1px solid #ccc;
@@ -408,7 +404,6 @@ textarea {
     background: #fff;
 }
 
-/* 货币 */
 .currency-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .currency-card {
     flex: 1;
@@ -541,7 +536,6 @@ textarea {
 .rate-card .value { font-size: 16px; font-weight: bold; color: #222; }
 .rate-card .reverse { font-size: 12px; color: #999; margin-top: 4px; }
 
-/* 二维码 */
 .qr-input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .qr-input-row input {
     flex: 1;
@@ -628,6 +622,59 @@ textarea {
 .find-modal-actions button { padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; }
 .find-modal-actions .btn-primary { background: #1976d2; color: #fff; }
 .find-modal-actions .btn-secondary { background: #e0e0e0; color: #333; }
+
+/* 单元格筛选弹窗 */
+#cellFilterModal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+#cellFilterModal.open { display: flex; }
+.cell-filter-box {
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 12px;
+    min-width: 400px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.cell-filter-box h4 { margin: 0 0 14px 0; font-size: 16px; }
+.cell-filter-row { margin-bottom: 12px; }
+.cell-filter-row label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: bold; }
+.cell-filter-row .readonly-value {
+    padding: 8px 12px;
+    background: #f0f7ff;
+    border: 1px solid #d0e3ff;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1976d2;
+    font-weight: bold;
+}
+.cell-filter-row input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+.cell-filter-row select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    background: #fff;
+}
+.cell-filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.cell-filter-actions button { padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; }
+.cell-filter-actions .btn-primary { background: #1976d2; color: #fff; }
+.cell-filter-actions .btn-secondary { background: #e0e0e0; color: #333; }
+.cell-filter-actions .btn-danger { background: #f44336; color: #fff; }
 </style>
 </head>
 <body>
@@ -844,6 +891,8 @@ textarea {
                 <button onclick="openFindReplace()" title="查找替换">🔍 查找替换</button>
                 <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
                 <button onclick="toggleWrap()" id="wrapToggleBtn" title="切换表格自动换行">🔁 自动换行</button>
+                <button onclick="toggleVerticalAlign()" id="valignBtn" title="切换表格单元格垂直对齐">⬆ 顶部对齐</button>
+                <button onclick="openCellFilter()" title="按当前单元格筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
             </div>
         </div>
         <div id="noteEditor" contenteditable="true"></div>
@@ -869,6 +918,34 @@ textarea {
         <div class="find-modal-actions">
             <button class="btn-secondary" onclick="closeFindReplace()">取消</button>
             <button class="btn-primary" onclick="doReplaceAll()">全部替换</button>
+        </div>
+    </div>
+</div>
+
+<!-- 单元格筛选弹窗 -->
+<div id="cellFilterModal">
+    <div class="cell-filter-box">
+        <h4>按单元格筛选</h4>
+        <div class="cell-filter-row">
+            <label>当前列（自动识别）</label>
+            <div class="readonly-value" id="filterColName">—</div>
+        </div>
+        <div class="cell-filter-row">
+            <label>筛选值（手动输入）</label>
+            <input type="text" id="filterInputValue" placeholder="输入要筛选的值...">
+        </div>
+        <div class="cell-filter-row">
+            <label>筛选方式</label>
+            <select id="filterMode">
+                <option value="equals">只看该值（精确匹配）</option>
+                <option value="contains">包含该值（模糊匹配）</option>
+                <option value="notContains">排除该值（隐藏匹配行）</option>
+            </select>
+        </div>
+        <div class="cell-filter-actions">
+            <button class="btn-secondary" onclick="closeCellFilter()">取消</button>
+            <button class="btn-danger" onclick="clearCellFilter()">清除筛选</button>
+            <button class="btn-primary" onclick="applyCellFilter()">应用筛选</button>
         </div>
     </div>
 </div>
@@ -1502,6 +1579,7 @@ function insertHr() {
     updateNoteStatus();
 }
 
+/* ===== 表格自动换行 ===== */
 let autoWrap = true;
 function toggleWrap() {
     autoWrap = !autoWrap;
@@ -1531,7 +1609,6 @@ function applyWrapSetting() {
                 word-wrap: break-word !important;
                 overflow-wrap: break-word !important;
                 white-space: normal !important;
-                vertical-align: top !important;
             }
         `;
     } else {
@@ -1541,13 +1618,123 @@ function applyWrapSetting() {
                 word-wrap: normal !important;
                 overflow-wrap: normal !important;
                 white-space: nowrap !important;
-                vertical-align: top !important;
             }
             #noteEditor table {
                 table-layout: auto !important;
             }
         `;
     }
+}
+
+/* ===== 表格垂直对齐 ===== */
+let vAlign = 'top';
+function toggleVerticalAlign() {
+    vAlign = (vAlign === 'top') ? 'middle' : 'top';
+    applyVAlignSetting();
+    const btn = document.getElementById('valignBtn');
+    if (vAlign === 'middle') {
+        btn.textContent = '↕ 垂直居中';
+        btn.classList.add('active-toggle');
+    } else {
+        btn.textContent = '⬆ 顶部对齐';
+        btn.classList.remove('active-toggle');
+    }
+    saveCurrent();
+}
+function applyVAlignSetting() {
+    const styleId = 'dynamicVAlignStyle';
+    let styleEl = document.getElementById(styleId);
+    if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = `
+        #noteEditor td, #noteEditor th {
+            vertical-align: ${vAlign} !important;
+        }
+    `;
+}
+
+/* ===== 按单元格筛选 ===== */
+let filterTarget = null;   // { table, colIndex, colName }
+
+function getCurrentCell() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return null;
+    let node = sel.anchorNode;
+    while (node && node !== noteEditor) {
+        if (node.nodeType === 1 && (node.tagName === 'TD' || node.tagName === 'TH')) {
+            return node;
+        }
+        node = node.parentNode;
+    }
+    return null;
+}
+
+function openCellFilter() {
+    const cell = getCurrentCell();
+    if (!cell) {
+        alert('请先把光标放在表格的某个单元格里，再点击「筛选」');
+        return;
+    }
+    const row = cell.parentElement;
+    const colIndex = Array.from(row.children).indexOf(cell);
+    const table = cell.closest('table');
+    const firstRow = table.querySelector('tr');
+    const headerCell = firstRow.children[colIndex];
+    const colName = headerCell ? headerCell.innerText.trim() : `第${colIndex + 1}列`;
+
+    filterTarget = { table, colIndex, colName };
+
+    document.getElementById('filterColName').textContent = colName;
+    document.getElementById('filterInputValue').value = '';
+    document.getElementById('filterMode').value = 'equals';
+
+    document.getElementById('cellFilterModal').classList.add('open');
+    setTimeout(() => document.getElementById('filterInputValue').focus(), 50);
+}
+
+function closeCellFilter() {
+    document.getElementById('cellFilterModal').classList.remove('open');
+}
+
+function applyCellFilter() {
+    if (!filterTarget) return;
+    const value = document.getElementById('filterInputValue').value.trim().toLowerCase();
+    if (!value) {
+        alert('请输入筛选值');
+        return;
+    }
+    const mode = document.getElementById('filterMode').value;
+    const { table, colIndex } = filterTarget;
+
+    let visible = 0, total = 0;
+    table.querySelectorAll('tr').forEach(row => {
+        if (row.querySelector('th') && !row.querySelector('td')) return;
+        total++;
+        const cell = row.children[colIndex];
+        if (!cell) { row.style.display = 'none'; return; }
+        const text = cell.innerText.trim().toLowerCase();
+        let match = false;
+        if (mode === 'equals') match = (text === value);
+        else if (mode === 'contains') match = text.includes(value);
+        else if (mode === 'notContains') match = !text.includes(value);
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+
+    closeCellFilter();
+    noteStatusRight.textContent = `🔽 筛选 ${visible}/${total} 行`;
+    noteStatusRight.style.color = '#1976d2';
+}
+
+function clearCellFilter() {
+    if (!filterTarget) { closeCellFilter(); return; }
+    filterTarget.table.querySelectorAll('tr').forEach(row => row.style.display = '');
+    closeCellFilter();
+    noteStatusRight.textContent = '✕ 筛选已清除';
+    noteStatusRight.style.color = '#4caf50';
 }
 
 function updateNoteStatus() {
@@ -1760,6 +1947,7 @@ noteEditor.addEventListener("click", (e) => {
 window.addEventListener('load', () => {
     convertCurrency();
     applyWrapSetting();
+    applyVAlignSetting();
 });
 </script>
 
