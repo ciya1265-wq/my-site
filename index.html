@@ -1748,24 +1748,38 @@ function closeCellFilter() {
     document.getElementById('cellFilterModal').classList.remove('open');
 }
 
-/* ===== 核心：解析合并单元格 ===== */
-/* 把表格解析成一个二维数组，每一行都是完整的 N 列数据（包含从合并单元格继承的值） */
+/* ===== 读取单元格文本：把 <br> 和 <div> 转成 \n，保留原换行 ===== */
+function getCellText(cell) {
+    const clone = cell.cloneNode(true);
+    // <br> 转成 \n
+    clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+    // 块级元素后加 \n
+    clone.querySelectorAll('div, p').forEach(el => {
+        el.insertAdjacentText('afterend', '\n');
+    });
+    let text = clone.textContent || '';
+    // 压缩多余空行
+    text = text.replace(/\n{2,}/g, '\n').trim();
+    return text;
+}
+
+/* ===== 解析表格网格（含合并单元格） ===== */
 function parseTableGrid(table) {
     const rows = Array.from(table.querySelectorAll('tr'));
     const totalCols = rows[0] ? rows[0].children.length : 0;
-    
-    // 记录每个位置是否已经被上面的 rowspan 占用了
-    const occupied = [];  // occupied[rowIndex][colIndex] = true / false
+
+    // 记录哪些位置已被上方 rowspan 占用
+    const occupied = [];
     for (let r = 0; r < rows.length; r++) {
         occupied[r] = new Array(totalCols).fill(false);
     }
-    
+
     // 存储每一行每一列的值
-    const grid = [];  // grid[rowIndex][colIndex] = 文本值
+    const grid = [];
     for (let r = 0; r < rows.length; r++) {
         grid[r] = new Array(totalCols).fill('');
     }
-    
+
     for (let r = 0; r < rows.length; r++) {
         const cells = Array.from(rows[r].children);
         let colIdx = 0;
@@ -1775,12 +1789,12 @@ function parseTableGrid(table) {
                 colIdx++;
             }
             if (colIdx >= totalCols) break;
-            
+
             const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
             const colspan = parseInt(cell.getAttribute('colspan')) || 1;
-            const text = cell.innerText.trim();
-            
-            // 填充 colspan × rowspan 的范围
+            const text = getCellText(cell);
+
+            // 填充 rowspan × colspan 范围
             for (let dr = 0; dr < rowspan; dr++) {
                 for (let dc = 0; dc < colspan; dc++) {
                     if (r + dr < rows.length && colIdx + dc < totalCols) {
@@ -1792,26 +1806,34 @@ function parseTableGrid(table) {
             colIdx += colspan;
         }
     }
-    
+
     return { grid, totalCols };
 }
 
-/* ===== 重新渲染表格（含合并） ===== */
-function renderGrid(grid, headerRowIndex, table) {
+/* ===== 转义 HTML 特殊字符 ===== */
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/* ===== 渲染网格为 HTML 表格（重建合并 + 保留换行） ===== */
+function renderGrid(grid, headerRowIndex) {
     if (grid.length === 0) return '';
-    
+
     const totalCols = grid[0].length;
-    
-    // 判断每一列每一行是否应该合并（向上合并）
-    // mergeWithPrev[r][c] = true 表示该单元格与上一行合并（不输出）
-    // rowspanCount[r][c] = n 表示从该行开始合并 n 行
-    const mergeWithPrev = [];
-    const rowspanCount = [];
+
+    // 计算每列的合并结构
+    const mergeWithPrev = [];  // true 表示该格与上一行合并（不输出）
+    const rowspanCount = [];   // 该格向下合并几行
     for (let r = 0; r < grid.length; r++) {
         mergeWithPrev[r] = new Array(totalCols).fill(false);
         rowspanCount[r] = new Array(totalCols).fill(1);
     }
-    
+
     for (let c = 0; c < totalCols; c++) {
         let start = 0;
         for (let r = 1; r <= grid.length; r++) {
@@ -1827,7 +1849,7 @@ function renderGrid(grid, headerRowIndex, table) {
             }
         }
     }
-    
+
     let html = '';
     for (let r = 0; r < grid.length; r++) {
         html += '<tr>';
@@ -1835,11 +1857,12 @@ function renderGrid(grid, headerRowIndex, table) {
             if (mergeWithPrev[r][c]) continue;
             const span = rowspanCount[r][c];
             const rowspanAttr = span > 1 ? ` rowspan="${span}"` : '';
-            const text = grid[r][c];
+            // 保留原换行：\n → <br>
+            const textHtml = escapeHtml(grid[r][c]).replace(/\n/g, '<br>');
             if (r === headerRowIndex) {
-                html += `<th${rowspanAttr}>${text}</th>`;
+                html += `<th${rowspanAttr}>${textHtml}</th>`;
             } else {
-                html += `<td${rowspanAttr}>${text}</td>`;
+                html += `<td${rowspanAttr}>${textHtml}</td>`;
             }
         }
         html += '</tr>';
@@ -1855,7 +1878,7 @@ function applyCellFilter() {
     const { table, colIndex, colName } = filterTarget;
 
     // 解析原表格为二维网格
-    const { grid, totalCols } = parseTableGrid(table);
+    const { grid } = parseTableGrid(table);
     if (grid.length < 2) { alert('表格没有数据行'); return; }
 
     // 第一行是表头
@@ -1877,8 +1900,8 @@ function applyCellFilter() {
     // 构建新网格：表头 + 匹配行
     const newGrid = [headerRow, ...matchedRows];
 
-    // 渲染新表格
-    const newTableHtml = renderGrid(newGrid, 0, table);
+    // 渲染
+    const newTableHtml = renderGrid(newGrid, 0);
 
     let html = `<div class="filtered-result" contenteditable="false">`;
     html += `<div class="filtered-banner">🔽 筛选：${colName} ${getModeLabel(mode)} "${value}"（共 ${matchedRows.length} 行）
