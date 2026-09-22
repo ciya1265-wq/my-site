@@ -200,8 +200,19 @@ body {
     word-break: break-word;
 }
 #noteEditor img { max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; display: block; }
-#noteEditor table { border-collapse: collapse; width: 100%; margin: 10px 0; table-layout: fixed; }
-#noteEditor td, #noteEditor th { border: 1px solid #ccc; padding: 8px; word-break: break-word; }
+#noteEditor table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0;
+    table-layout: fixed;          /* 关键：固定表格布局 */
+}
+#noteEditor td, #noteEditor th {
+    border: 1px solid #ccc;
+    padding: 8px;
+    word-break: break-all;        /* 关键：长单词/长文本强制换行 */
+    white-space: normal;          /* 允许换行 */
+    vertical-align: top;          /* 内容顶部对齐，多行显示更整齐 */
+}
 #noteEditor blockquote { border-left: 4px solid #ccc; margin: 10px 0; padding: 10px; background: #f8f8f8; }
 #noteEditor pre { background: #f4f4f4; padding: 12px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
 #noteEditor a { color: #2563eb; text-decoration: underline; word-break: break-all; }
