@@ -13,6 +13,7 @@ body {
     color: #333;
 }
 
+/* ===== 顶部标签栏 ===== */
 #tabBar {
     display: flex;
     flex-wrap: wrap;
@@ -306,7 +307,7 @@ body {
 }
 
 /* ============================================================
-   翻译 / 货币 / 二维码
+   翻译面板
 ============================================================ */
 #apiBar {
     display: flex;
@@ -327,7 +328,7 @@ body {
     border: 1px solid #ccc;
     background: #fff;
     cursor: pointer;
-    min-width: 220px;
+    min-width: 260px;
 }
 .status-badge {
     display: inline-flex;
@@ -432,7 +433,7 @@ textarea {
     display: flex;
     flex-direction: column;
 }
-.translation-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.translation-header { display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center; gap: 6px; }
 .translation-header button {
     padding: 6px 12px;
     border: none;
@@ -443,6 +444,16 @@ textarea {
     font-size: 14px;
 }
 .translation-header button:hover { background: #45a049; }
+.via-badge {
+    display: none;
+    font-size: 11px;
+    color: #b26a00;
+    background: #fff7e6;
+    border: 1px solid #ffe7ba;
+    border-radius: 999px;
+    padding: 2px 8px;
+    margin-left: 6px;
+}
 .result-card {
     height: 280px;
     overflow-y: auto;
@@ -455,6 +466,9 @@ textarea {
     background: #fff;
 }
 
+/* ============================================================
+   货币换算
+============================================================ */
 .currency-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .currency-card {
     flex: 1;
@@ -587,6 +601,9 @@ textarea {
 .rate-card .value { font-size: 16px; font-weight: bold; color: #222; }
 .rate-card .reverse { font-size: 12px; color: #999; margin-top: 4px; }
 
+/* ============================================================
+   二维码
+============================================================ */
 .qr-input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .qr-input-row input {
     flex: 1;
@@ -640,6 +657,9 @@ textarea {
 .qr-footer .download-btn:disabled { background: #bbb; cursor: not-allowed; }
 .qr-footer .tip { font-size: 12px; color: #999; }
 
+/* ============================================================
+   弹窗
+============================================================ */
 #findReplaceModal {
     display: none;
     position: fixed;
@@ -778,6 +798,7 @@ textarea {
             <div class="translation-block">
                 <div class="translation-header">
                     <button class="translate-btn" data-index="0">翻译</button>
+                    <span class="via-badge" data-index="0"></span>
                     <button class="copy-btn" data-index="0">复制</button>
                 </div>
                 <div id="result1" class="result-card" contenteditable="true"></div>
@@ -785,6 +806,7 @@ textarea {
             <div class="translation-block">
                 <div class="translation-header">
                     <button class="translate-btn" data-index="1">翻译</button>
+                    <span class="via-badge" data-index="1"></span>
                     <button class="copy-btn" data-index="1">复制</button>
                 </div>
                 <div id="result2" class="result-card" contenteditable="true"></div>
@@ -792,6 +814,7 @@ textarea {
             <div class="translation-block">
                 <div class="translation-header">
                     <button class="translate-btn" data-index="2">翻译</button>
+                    <span class="via-badge" data-index="2"></span>
                     <button class="copy-btn" data-index="2">复制</button>
                 </div>
                 <div id="result3" class="result-card" contenteditable="true"></div>
@@ -1013,7 +1036,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 /* ============================================================
-   翻译模块
+   翻译模块（多通道自动降级）
 ============================================================ */
 const languages = {
     "af":"南非荷兰语","sq":"阿尔巴尼亚语","am":"阿姆哈拉语","ar":"阿拉伯语",
@@ -1046,28 +1069,53 @@ const languages = {
 };
 const sortedLangs = Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1]));
 
+/* ===== 多通道配置 ===== */
+const GOOGLE_CHANNELS = [
+    { client: 'at',             label: 'client=at' },
+    { client: 'dict-chrome-ex', label: 'client=dict-chrome-ex' },
+    { client: 'gtx',            label: 'client=gtx' }
+];
+
+function buildGoogleUrl(text, lang, client) {
+    return 'https://translate.googleapis.com/translate_a/single?client=' + client +
+        '&sl=auto&tl=' + encodeURIComponent(lang) + '&dt=t&q=' + encodeURIComponent(text);
+}
+
 const apiEndpoints = {
-    googleapis: {
-        name: '接口1: translate.googleapis.com',
-        build: (text, lang) => `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
+    auto: {
+        name: '自动（推荐）· 谷歌3通道 + MyMemory 备用',
+        build: null,
+        parse: null,
+        detectLang: null
+    },
+    google_at: {
+        name: '仅用 client=at',
+        build: (text, lang) => buildGoogleUrl(text, lang, 'at'),
         parse: (data) => data[0].map(item => item[0]).join(''),
         detectLang: (data) => data[2] || null
     },
-    googlecn: {
-        name: '接口2: translate.google.cn',
-        build: (text, lang) => `https://translate.google.cn/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
+    google_dict: {
+        name: '仅用 client=dict-chrome-ex',
+        build: (text, lang) => buildGoogleUrl(text, lang, 'dict-chrome-ex'),
         parse: (data) => data[0].map(item => item[0]).join(''),
         detectLang: (data) => data[2] || null
     },
-    googlecom: {
-        name: '接口3: translate.google.com',
-        build: (text, lang) => `https://translate.google.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`,
+    google_gtx: {
+        name: '仅用 client=gtx',
+        build: (text, lang) => buildGoogleUrl(text, lang, 'gtx'),
         parse: (data) => data[0].map(item => item[0]).join(''),
         detectLang: (data) => data[2] || null
     }
 };
 
-let currentApi = 'googleapis';
+/* ===== 状态 ===== */
+var state = {
+    controller: null,
+    retryTimers: {},
+    detected: null
+};
+
+let currentApi = 'auto';
 let lastDetectedLang = '';
 
 function initApiSelect() {
@@ -1178,9 +1226,15 @@ function setDetectedLang(code) {
 
 async function testApi() {
     setApiStatus('testing');
-    const api = apiEndpoints[currentApi];
-    if (!api) { setApiStatus('fail'); return false; }
-    const url = api.build('hello', 'zh-CN');
+    const key = document.getElementById('apiSelect').value;
+    const cfg = apiEndpoints[key];
+    if (!cfg) { setApiStatus('fail'); return false; }
+    var url;
+    if (key === 'auto') {
+        url = buildGoogleUrl('hello', 'zh-CN', 'at');
+    } else {
+        url = cfg.build('hello', 'zh-CN');
+    }
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 6000);
@@ -1188,49 +1242,257 @@ async function testApi() {
         clearTimeout(timeout);
         if (!res.ok) { setApiStatus('fail'); return false; }
         const data = await res.json();
-        const result = api.parse(data);
-        const ok = result && result.length > 0 && result !== '翻译失败';
+        const result = (key === 'auto' ? data[0].map(item => item[0]).join('') : cfg.parse(data));
+        const ok = result && result.length > 0;
         setApiStatus(ok ? 'ok' : 'fail');
         return ok;
     } catch (e) {
+        console.error('接口检测失败:', e);
         setApiStatus('fail');
         return false;
     }
 }
 
-async function translateTo(text, targetLang){
-    const api = apiEndpoints[currentApi];
-    if (!api) return '翻译失败';
-    const url = api.build(text, targetLang);
-    try {
-        const res = await fetch(url);
-        if (!res.ok) { setApiStatus('fail'); return '翻译失败'; }
-        const data = await res.json();
-        const result = api.parse(data);
-        if (api.detectLang) {
-            const detected = api.detectLang(data);
-            if (detected && detected !== lastDetectedLang) {
-                lastDetectedLang = detected;
-                setDetectedLang(detected);
-            }
+/* ===== 带超时的 fetch ===== */
+function fetchWithTimeout(url, options, timeoutMs) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
+    var sig = options && options.signal;
+    if (sig) {
+        if (sig.aborted) ctrl.abort();
+        else sig.addEventListener('abort', function () { ctrl.abort(); });
+    }
+    return fetch(url, Object.assign({}, options, { signal: ctrl.signal })).then(function (res) {
+        clearTimeout(timer);
+        return res;
+    }, function (err) {
+        clearTimeout(timer);
+        if (err && err.name === 'AbortError') {
+            if (sig && sig.aborted) throw err;
+            var tErr = new Error('TIMEOUT');
+            tErr.timeout = true;
+            throw tErr;
         }
+        throw err;
+    });
+}
+
+/* ===== 单通道：Google ===== */
+async function fetchGoogleChannel(text, target, client, signal) {
+    var url = buildGoogleUrl(text, target, client);
+    var res = await fetchWithTimeout(url, { signal: signal }, 7000);
+    if (!res.ok) {
+        var httpErr = new Error('HTTP ' + res.status);
+        if (res.status === 429 || res.status === 403) httpErr.rateLimited = true;
+        throw httpErr;
+    }
+    var data = await res.json();
+    if (!data || !data[0]) throw new Error('BAD_RESPONSE');
+    var translated = (data[0] || []).map(function (seg) { return seg[0] || ''; }).join('');
+    if (!translated) throw new Error('EMPTY_TRANSLATION');
+    return { translated: translated, detected: data[2] || null, via: 'google', channel: client };
+}
+
+/* ===== 备用通道：MyMemory ===== */
+var MYMEM_LANG = {
+    en: 'en', de: 'de', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW',
+    fr: 'fr', es: 'es', it: 'it', pt: 'pt', ru: 'ru',
+    ar: 'ar', ja: 'ja', ko: 'ko', nl: 'nl', pl: 'pl',
+    tr: 'tr', cs: 'cs', sv: 'sv', da: 'da', el: 'el',
+    uk: 'uk', he: 'he', th: 'th', vi: 'vi', hi: 'hi',
+    ro: 'ro', sk: 'sk', hu: 'hu', ca: 'ca', bg: 'bg',
+    et: 'et', lt: 'lt', lv: 'lv', sl: 'sl', hr: 'hr',
+    sr: 'sr', fa: 'fa', ur: 'ur', id: 'id', ms: 'ms',
+    fi: 'fi', no: 'no', sq: 'sq', mk: 'mk', az: 'az',
+    be: 'be', ka: 'ka', kk: 'kk', hy: 'hy', ta: 'ta',
+    te: 'te', ml: 'ml', kn: 'kn', bn: 'bn', ne: 'ne',
+    si: 'si', my: 'my', km: 'km', lo: 'lo', sw: 'sw',
+    af: 'af', cy: 'cy', ga: 'ga', mt: 'mt', is: 'is',
+    eu: 'eu', gl: 'gl', bs: 'bs', am: 'am', zu: 'zu',
+    xh: 'xh', sn: 'sn', ny: 'ny', mg: 'mg', yo: 'yo',
+    ig: 'ig', ha: 'ha', st: 'st', tl: 'tl', ceb: 'ceb',
+    jw: 'jw', su: 'su', lb: 'lb', fy: 'fy', gd: 'gd',
+    uz: 'uz', ky: 'ky', tg: 'tg', mn: 'mn', ps: 'ps', sd: 'sd',
+    gu: 'gu', pa: 'pa', or: 'or', as: 'as', ht: 'ht',
+    mi: 'mi', haw: 'haw', sm: 'sm', fj: 'fj'
+};
+
+function guessSourceLang(text) {
+    var cjk = text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g);
+    var kana = text.match(/[\u3040-\u30ff]/g);
+    var hangul = text.match(/[\uac00-\ud7af]/g);
+    var cyr = text.match(/[\u0400-\u04ff]/g);
+    var arab = text.match(/[\u0600-\u06ff]/g);
+    var hebr = text.match(/[\u0590-\u05ff]/g);
+    var thai = text.match(/[\u0e00-\u0e7f]/g);
+    var cnt = [(cjk||[]).length, (kana||[]).length, (hangul||[]).length, (cyr||[]).length, (arab||[]).length, (hebr||[]).length, (thai||[]).length];
+    var max = Math.max.apply(null, cnt);
+    if (!max) return 'en';
+    var m = ['zh-CN', 'ja', 'ko', 'ru', 'ar', 'he', 'th'];
+    return m[cnt.indexOf(max)];
+}
+
+async function fetchMyMemory(text, target, signal, detectedLang) {
+    var code = MYMEM_LANG[target];
+    if (!code) { var err = new Error('FALLBACK_UNSUPPORTED'); err.unsupported = true; throw err; }
+    var src = MYMEM_LANG[detectedLang] || MYMEM_LANG[guessSourceLang(text)] || 'en';
+    if (src === code) return { translated: text, detected: src, via: 'mymemory', channel: 'mymemory' };
+    var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) +
+        '&langpair=' + encodeURIComponent(src) + '|' + encodeURIComponent(code);
+    var res = await fetch(url, { signal: signal });
+    if (!res.ok) {
+        var hErr = new Error('MYMEM_HTTP ' + res.status);
+        if (res.status === 429) {
+            hErr.rateLimited = true;
+            try {
+                var bodyText = await res.text();
+                var m = bodyText.match(/NEXT AVAILABLE IN\s*(\d+)\s*HOURS?\s*(\d+)\s*MINUTES?\s*(\d+)\s*SECONDS?/i);
+                if (m) hErr.waitMinutes = Math.max(1, parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + (parseInt(m[3], 10) > 0 ? 1 : 0));
+            } catch (ignore) {}
+        }
+        throw hErr;
+    }
+    var data = await res.json();
+    if (!data || data.responseStatus !== 200 || !data.responseData || !data.responseData.translatedText) {
+        var e2 = new Error('MYMEM_QUOTA'); e2.mymemQuota = true; throw e2;
+    }
+    var trans = data.responseData.translatedText;
+    if (!trans || trans === text || /(INVALID|UNSUPPORTED|NOT SUPPORTED)/i.test(trans)) throw new Error('MYMEM_EMPTY');
+    return { translated: trans, detected: src, via: 'mymemory', channel: 'mymemory' };
+}
+
+/* ===== 核心：自动按通道降级翻译 ===== */
+async function translateTo(text, targetLang) {
+    var signal = state.controller ? state.controller.signal : null;
+    var lastErr = null;
+    var detectedLang = state.detected || null;
+    var key = currentApi;
+
+    // 如果用户选了「仅用某通道」，只走那一个
+    if (key !== 'auto') {
+        var cfg = apiEndpoints[key];
+        var url = cfg.build(text, targetLang);
+        try {
+            var res = await fetchWithTimeout(url, { signal: signal }, 7000);
+            if (!res.ok) { setApiStatus('fail'); throw new Error('HTTP ' + res.status); }
+            var data = await res.json();
+            var result = cfg.parse(data);
+            if (cfg.detectLang) {
+                var detected = cfg.detectLang(data);
+                if (detected && detected !== lastDetectedLang) {
+                    lastDetectedLang = detected;
+                    setDetectedLang(detected);
+                }
+            }
+            setApiStatus('ok');
+            return { translated: result || '翻译失败', detected: detected, via: 'google' };
+        } catch (e) {
+            setApiStatus('fail');
+            throw e;
+        }
+    }
+
+    // auto 模式：依次尝试 3 个 Google client 通道
+    for (var i = 0; i < GOOGLE_CHANNELS.length; i++) {
+        var ch = GOOGLE_CHANNELS[i];
+        try {
+            var r = await fetchGoogleChannel(text, targetLang, ch.client, signal);
+            if (r.detected && !detectedLang) detectedLang = r.detected;
+            setApiStatus('ok');
+            return r;
+        } catch (e) {
+            if (e.name === 'AbortError') throw e;
+            lastErr = e;
+        }
+    }
+
+    // Google 全失败 → 降级 MyMemory
+    try {
+        var r2 = await fetchMyMemory(text, targetLang, signal, detectedLang);
         setApiStatus('ok');
-        return result || '翻译失败';
-    } catch(e) {
+        return r2;
+    } catch (e2) {
+        if (e2.name === 'AbortError') throw e2;
         setApiStatus('fail');
-        return '翻译失败';
+        if (e2.unsupported) throw e2;
+        if (lastErr && lastErr.rateLimited) {
+            var combined = new Error('ALL_CHANNELS_RATE_LIMITED');
+            combined.rateLimited = true;
+            combined.waitMinutes = e2.waitMinutes || lastErr.waitMinutes || null;
+            throw combined;
+        }
+        throw e2;
     }
 }
 
+/* ===== 显示通道徽章 ===== */
+function setViaBadge(idx, via) {
+    var badge = document.querySelector('.via-badge[data-index="' + idx + '"]');
+    if (!badge) return;
+    if (via === 'mymemory') {
+        badge.textContent = '备用通道';
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+/* ===== 防抖 ===== */
 function debounce(fn,delay){let timer=null; return function(...args){clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args),delay);}}
+
+/* ===== 实时翻译（支持自动重试） ===== */
+var RETRY_INTERVAL = 30000;
+var MAX_RETRIES = 30;
+
+function doTranslateOne(idx, text, lang, attempt) {
+    if (typeof attempt !== 'number') attempt = 0;
+    var resultEl = document.getElementById(['result1','result2','result3'][idx]);
+    if (attempt >= MAX_RETRIES) {
+        resultEl.innerText = '多次尝试后翻译服务仍被限流，请稍后重新输入';
+        return;
+    }
+    if (!state.controller || state.controller.signal.aborted) {
+        state.controller = new AbortController();
+    }
+    translateTo(text, lang).then(function (result) {
+        if (state.controller.signal.aborted) return;
+        if (result.detected && result.detected !== lastDetectedLang) {
+            lastDetectedLang = result.detected;
+            setDetectedLang(result.detected);
+        }
+        resultEl.innerText = result.translated || '';
+        setViaBadge(idx, result.via);
+    }).catch(function (e) {
+        if (e.name === 'AbortError') return;
+        var errText;
+        if (e && e.unsupported) errText = '该语言暂不受备用通道支持，正在自动重试…';
+        else if (e && e.mymemQuota) errText = '备用通道今日额度已用完，额度恢复后自动完成';
+        else if (e && e.rateLimited && e.waitMinutes) errText = '翻译接口暂时限流，约 ' + e.waitMinutes + ' 分钟后恢复，正在自动重试…';
+        else if (e && e.rateLimited) errText = '翻译接口暂时限流，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
+        else errText = '翻译服务暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
+        resultEl.innerText = errText;
+        setViaBadge(idx, null);
+        state.retryTimers[idx] = setTimeout(function () {
+            if (state.controller && state.controller.signal.aborted) return;
+            doTranslateOne(idx, text, lang, attempt + 1);
+        }, RETRY_INTERVAL);
+    });
+}
 
 const translateText = debounce(async ()=>{
     const text = document.getElementById('inputText').value.trim();
+    if (state.controller) state.controller.abort();
+    // 清除旧的重试定时器
+    Object.keys(state.retryTimers).forEach(function (k) { clearTimeout(state.retryTimers[k]); });
+    state.retryTimers = {};
+    state.controller = new AbortController();
+
     ['result1','result2','result3'].forEach((id,i)=>document.getElementById(id).innerText=text?'翻译中...':'');
-    if(!text) { setDetectedLang(''); lastDetectedLang = ''; return; }
+    if(!text) { setDetectedLang(''); lastDetectedLang = ''; state.detected = null; return; }
+    state.detected = null;
+
     const langs=['targetLang1','targetLang2','targetLang3'].map(id=>document.getElementById(id).value);
-    const results = await Promise.all(langs.map(l=>translateTo(text,l)));
-    ['result1','result2','result3'].forEach((id,i)=>document.getElementById(id).innerText=results[i]);
+    langs.forEach(function (lang, idx) { doTranslateOne(idx, text, lang); });
 },500);
 
 document.getElementById('apiSelect').addEventListener('change', async function() {
@@ -1251,8 +1513,9 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
         const text=document.getElementById('inputText').value.trim();
         if(!text) return;
         const lang=document.getElementById(['targetLang1','targetLang2','targetLang3'][idx]).value;
-        const result=await translateTo(text,lang);
-        document.getElementById(['result1','result2','result3'][idx]).innerText=result;
+        if (state.controller) state.controller.abort();
+        state.controller = new AbortController();
+        doTranslateOne(idx, text, lang);
     });
 });
 
@@ -1748,53 +2011,37 @@ function closeCellFilter() {
     document.getElementById('cellFilterModal').classList.remove('open');
 }
 
-/* ===== 读取单元格文本：把 <br> 和 <div> 转成 \n，保留原换行 ===== */
+/* ===== 读取单元格文本：保留 <br> 换行 ===== */
 function getCellText(cell) {
     const clone = cell.cloneNode(true);
-    // <br> 转成 \n
     clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-    // 块级元素后加 \n
-    clone.querySelectorAll('div, p').forEach(el => {
-        el.insertAdjacentText('afterend', '\n');
-    });
+    clone.querySelectorAll('div, p').forEach(el => { el.insertAdjacentText('afterend', '\n'); });
     let text = clone.textContent || '';
-    // 压缩多余空行
     text = text.replace(/\n{2,}/g, '\n').trim();
     return text;
 }
 
-/* ===== 解析表格网格（含合并单元格） ===== */
 function parseTableGrid(table) {
     const rows = Array.from(table.querySelectorAll('tr'));
     const totalCols = rows[0] ? rows[0].children.length : 0;
 
-    // 记录哪些位置已被上方 rowspan 占用
     const occupied = [];
-    for (let r = 0; r < rows.length; r++) {
-        occupied[r] = new Array(totalCols).fill(false);
-    }
+    for (let r = 0; r < rows.length; r++) occupied[r] = new Array(totalCols).fill(false);
 
-    // 存储每一行每一列的值
     const grid = [];
-    for (let r = 0; r < rows.length; r++) {
-        grid[r] = new Array(totalCols).fill('');
-    }
+    for (let r = 0; r < rows.length; r++) grid[r] = new Array(totalCols).fill('');
 
     for (let r = 0; r < rows.length; r++) {
         const cells = Array.from(rows[r].children);
         let colIdx = 0;
         for (const cell of cells) {
-            // 跳过被上方 rowspan 占用的列
-            while (colIdx < totalCols && occupied[r][colIdx]) {
-                colIdx++;
-            }
+            while (colIdx < totalCols && occupied[r][colIdx]) colIdx++;
             if (colIdx >= totalCols) break;
 
             const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
             const colspan = parseInt(cell.getAttribute('colspan')) || 1;
             const text = getCellText(cell);
 
-            // 填充 rowspan × colspan 范围
             for (let dr = 0; dr < rowspan; dr++) {
                 for (let dc = 0; dc < colspan; dc++) {
                     if (r + dr < rows.length && colIdx + dc < totalCols) {
@@ -1806,29 +2053,21 @@ function parseTableGrid(table) {
             colIdx += colspan;
         }
     }
-
     return { grid, totalCols };
 }
 
-/* ===== 转义 HTML 特殊字符 ===== */
 function escapeHtml(str) {
     return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-/* ===== 渲染网格为 HTML 表格（重建合并 + 保留换行） ===== */
 function renderGrid(grid, headerRowIndex) {
     if (grid.length === 0) return '';
-
     const totalCols = grid[0].length;
 
-    // 计算每列的合并结构
-    const mergeWithPrev = [];  // true 表示该格与上一行合并（不输出）
-    const rowspanCount = [];   // 该格向下合并几行
+    const mergeWithPrev = [];
+    const rowspanCount = [];
     for (let r = 0; r < grid.length; r++) {
         mergeWithPrev[r] = new Array(totalCols).fill(false);
         rowspanCount[r] = new Array(totalCols).fill(1);
@@ -1857,13 +2096,9 @@ function renderGrid(grid, headerRowIndex) {
             if (mergeWithPrev[r][c]) continue;
             const span = rowspanCount[r][c];
             const rowspanAttr = span > 1 ? ` rowspan="${span}"` : '';
-            // 保留原换行：\n → <br>
             const textHtml = escapeHtml(grid[r][c]).replace(/\n/g, '<br>');
-            if (r === headerRowIndex) {
-                html += `<th${rowspanAttr}>${textHtml}</th>`;
-            } else {
-                html += `<td${rowspanAttr}>${textHtml}</td>`;
-            }
+            if (r === headerRowIndex) html += `<th${rowspanAttr}>${textHtml}</th>`;
+            else html += `<td${rowspanAttr}>${textHtml}</td>`;
         }
         html += '</tr>';
     }
@@ -1877,15 +2112,12 @@ function applyCellFilter() {
     const mode = document.getElementById('filterMode').value;
     const { table, colIndex, colName } = filterTarget;
 
-    // 解析原表格为二维网格
     const { grid } = parseTableGrid(table);
     if (grid.length < 2) { alert('表格没有数据行'); return; }
 
-    // 第一行是表头
     const headerRow = grid[0];
     const dataRows = grid.slice(1);
 
-    // 筛选匹配行
     const matchedRows = dataRows.filter(row => {
         const cellText = (row[colIndex] || '').toLowerCase();
         let match = false;
@@ -1897,10 +2129,7 @@ function applyCellFilter() {
 
     if (matchedRows.length === 0) { alert('没有匹配的行'); return; }
 
-    // 构建新网格：表头 + 匹配行
     const newGrid = [headerRow, ...matchedRows];
-
-    // 渲染
     const newTableHtml = renderGrid(newGrid, 0);
 
     let html = `<div class="filtered-result" contenteditable="false">`;
@@ -1909,7 +2138,6 @@ function applyCellFilter() {
     </div>`;
     html += `<table>${newTableHtml}</table></div>`;
 
-    // 隐藏原表格，插入筛选结果
     table.style.display = 'none';
     const existing = document.querySelector('.filtered-result');
     if (existing) existing.remove();
