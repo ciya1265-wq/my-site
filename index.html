@@ -742,6 +742,15 @@ textarea {
 .cell-filter-box h4 { margin: 0 0 14px 0; font-size: 16px; }
 .cell-filter-row { margin-bottom: 12px; }
 .cell-filter-row label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: bold; }
+.cell-filter-row .readonly-value {
+    padding: 8px 12px;
+    background: #f0f7ff;
+    border: 1px solid #d0e3ff;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1976d2;
+    font-weight: bold;
+}
 .cell-filter-row input[type="text"] {
     width: 100%;
     padding: 8px 10px;
@@ -2432,8 +2441,8 @@ function doFind() {
     const lowerFind = find.toLowerCase();
     const nodes = getAllTextNodes();
 
-    // ===== 第一遍：收集所有匹配的位置，并数出总数 =====
-    const matches = [];  // 每项: { node, index, length }
+    // 第一遍：收集所有匹配位置，数出总数
+    const matches = [];
     for (let i = 0; i < nodes.length; i++) {
         const text = nodes[i].nodeValue;
         const lowerText = text.toLowerCase();
@@ -2448,26 +2457,17 @@ function doFind() {
 
     const totalMatches = matches.length;
 
-    // 没找到
     if (totalMatches === 0) {
         noteStatusRight.textContent = '未找到「' + find + '」';
         noteStatusRight.style.color = '#d93025';
         return;
     }
 
-    // ===== 第二遍：定位到下一个匹配（循环查找） =====
-    // lastFindIndex 表示"上一次停在第几个"（0-based）
-    // 下一个 = lastFindIndex + 1
+    // 第二遍：定位到下一个（循环）
     let nextIndex = lastFindIndex + 1;
-
-    // 如果越界，回到第 1 个（循环）
-    if (nextIndex >= totalMatches) {
-        nextIndex = 0;
-    }
+    if (nextIndex >= totalMatches) nextIndex = 0;
 
     const m = matches[nextIndex];
-
-    // 选中并滚动到可见
     const range = document.createRange();
     range.setStart(m.node, m.index);
     range.setEnd(m.node, m.index + m.length);
@@ -2479,10 +2479,7 @@ function doFind() {
     const parentEl = m.node.parentElement;
     if (parentEl) parentEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
 
-    // 记录当前位置（0-based），下次从这里 +1
     lastFindIndex = nextIndex;
-
-    // 显示「第 X/Y 个匹配」（1-based 给用户看）
     noteStatusRight.textContent = '第 ' + (nextIndex + 1) + '/' + totalMatches + ' 个匹配';
     noteStatusRight.style.color = '#0288d1';
 }
@@ -2508,6 +2505,8 @@ function doReplaceOne() {
     range.deleteContents();
     range.insertNode(document.createTextNode(replace));
 
+    // 替换后回退一位，让下次 doFind 从当前位置重新数
+    lastFindIndex = lastFindIndex - 1;
     setTimeout(() => doFind(), 50);
 
     saveCurrent();
