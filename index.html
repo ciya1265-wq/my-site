@@ -312,23 +312,11 @@ body {
 #apiBar {
     display: flex;
     align-items: center;
-    gap: 10px;
     margin-bottom: 10px;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
+    padding: 0;
+    background: transparent;
+    border: none;
     flex-wrap: wrap;
-}
-#apiBar label { font-size: 14px; font-weight: bold; color: #333; }
-#apiSelect {
-    padding: 6px 10px;
-    font-size: 14px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: #fff;
-    cursor: pointer;
-    min-width: 260px;
 }
 .status-badge {
     display: inline-flex;
@@ -759,8 +747,6 @@ textarea {
 <div id="tab-translate" class="tab-panel active">
     <div class="panel-container">
         <div id="apiBar">
-            <label>翻译接口:</label>
-            <select id="apiSelect"></select>
             <span id="apiStatus" class="status-badge status-testing">检测中...</span>
         </div>
         <div id="inputContainer">
@@ -1036,7 +1022,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 /* ============================================================
-   翻译模块（多通道自动降级）
+   翻译模块（全自动多通道降级）
 ============================================================ */
 const languages = {
     "af":"南非荷兰语","sq":"阿尔巴尼亚语","am":"阿姆哈拉语","ar":"阿拉伯语",
@@ -1069,64 +1055,47 @@ const languages = {
 };
 const sortedLangs = Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1]));
 
-/* ===== 多通道配置 ===== */
-const GOOGLE_CHANNELS = [
-    { client: 'at',             label: 'client=at' },
-    { client: 'dict-chrome-ex', label: 'client=dict-chrome-ex' },
-    { client: 'gtx',            label: 'client=gtx' }
-];
+/* 谷歌 3 个 client 通道 */
+const GOOGLE_CHANNELS = ['at', 'dict-chrome-ex', 'gtx'];
 
 function buildGoogleUrl(text, lang, client) {
     return 'https://translate.googleapis.com/translate_a/single?client=' + client +
         '&sl=auto&tl=' + encodeURIComponent(lang) + '&dt=t&q=' + encodeURIComponent(text);
 }
 
-const apiEndpoints = {
-    auto: {
-        name: '自动（推荐）· 谷歌3通道 + MyMemory 备用',
-        build: null,
-        parse: null,
-        detectLang: null
-    },
-    google_at: {
-        name: '仅用 client=at',
-        build: (text, lang) => buildGoogleUrl(text, lang, 'at'),
-        parse: (data) => data[0].map(item => item[0]).join(''),
-        detectLang: (data) => data[2] || null
-    },
-    google_dict: {
-        name: '仅用 client=dict-chrome-ex',
-        build: (text, lang) => buildGoogleUrl(text, lang, 'dict-chrome-ex'),
-        parse: (data) => data[0].map(item => item[0]).join(''),
-        detectLang: (data) => data[2] || null
-    },
-    google_gtx: {
-        name: '仅用 client=gtx',
-        build: (text, lang) => buildGoogleUrl(text, lang, 'gtx'),
-        parse: (data) => data[0].map(item => item[0]).join(''),
-        detectLang: (data) => data[2] || null
-    }
+/* 备用通道语言映射 */
+var MYMEM_LANG = {
+    en:'en',de:'de','zh-CN':'zh-CN','zh-TW':'zh-TW',
+    fr:'fr',es:'es',it:'it',pt:'pt',ru:'ru',
+    ar:'ar',ja:'ja',ko:'ko',nl:'nl',pl:'pl',
+    tr:'tr',cs:'cs',sv:'sv',da:'da',el:'el',
+    uk:'uk',he:'he',th:'th',vi:'vi',hi:'hi',
+    ro:'ro',sk:'sk',hu:'hu',ca:'ca',bg:'bg',
+    et:'et',lt:'lt',lv:'lv',sl:'sl',hr:'hr',
+    sr:'sr',fa:'fa',ur:'ur',id:'id',ms:'ms',
+    fi:'fi',no:'no',sq:'sq',mk:'mk',az:'az',
+    be:'be',ka:'ka',kk:'kk',hy:'hy',ta:'ta',
+    te:'te',ml:'ml',kn:'kn',bn:'bn',ne:'ne',
+    si:'si',my:'my',km:'km',lo:'lo',sw:'sw',
+    af:'af',cy:'cy',ga:'ga',mt:'mt',is:'is',
+    eu:'eu',gl:'gl',bs:'bs',am:'am',zu:'zu',
+    xh:'xh',sn:'sn',ny:'ny',mg:'mg',yo:'yo',
+    ig:'ig',ha:'ha',st:'st',tl:'tl',ceb:'ceb',
+    jw:'jw',su:'su',lb:'lb',fy:'fy',gd:'gd',
+    uz:'uz',ky:'ky',tg:'tg',mn:'mn',ps:'ps',sd:'sd',
+    gu:'gu',pa:'pa',or:'or',as:'as',ht:'ht',
+    mi:'mi',haw:'haw',sm:'sm',fj:'fj'
 };
 
-/* ===== 状态 ===== */
+/* 状态 */
 var state = {
     controller: null,
     retryTimers: {},
     detected: null
 };
+var lastDetectedLang = '';
 
-let currentApi = 'auto';
-let lastDetectedLang = '';
-
-function initApiSelect() {
-    const select = document.getElementById('apiSelect');
-    Object.entries(apiEndpoints).forEach(([key, cfg]) => {
-        select.add(new Option(cfg.name, key));
-    });
-    select.value = currentApi;
-}
-initApiSelect();
-
+/* 语言搜索下拉（目标语言） */
 function initSearchableSelects() {
     document.querySelectorAll('.searchable-select').forEach(wrap => {
         const input = wrap.querySelector('input[type="text"]');
@@ -1134,16 +1103,15 @@ function initSearchableSelects() {
         const dropdown = wrap.querySelector('.dropdown');
 
         const setDisplay = (code) => {
-            const name = languages[code] || code;
-            input.value = name;
+            input.value = languages[code] || code;
             hidden.value = code;
         };
         setDisplay(hidden.value);
 
         const renderDropdown = (filter = '') => {
-            const filterLower = filter.toLowerCase();
+            const f = filter.toLowerCase();
             const filtered = sortedLangs.filter(([code, name]) =>
-                name.toLowerCase().includes(filterLower) || code.toLowerCase().includes(filterLower)
+                name.toLowerCase().includes(f) || code.toLowerCase().includes(f)
             );
             if (filtered.length === 0) {
                 dropdown.innerHTML = '<div class="dropdown-empty">无匹配语言</div>';
@@ -1196,9 +1164,8 @@ function initSearchableSelects() {
         dropdown.addEventListener('click', (e) => {
             const item = e.target.closest('.dropdown-item');
             if (!item) return;
-            const code = item.dataset.code;
-            hidden.value = code;
-            input.value = languages[code] || code;
+            hidden.value = item.dataset.code;
+            input.value = languages[item.dataset.code] || item.dataset.code;
             dropdown.classList.remove('open');
             translateText();
         });
@@ -1213,47 +1180,17 @@ function setApiStatus(status) {
     const el = document.getElementById('apiStatus');
     el.className = 'status-badge';
     if (status === 'ok') { el.classList.add('status-ok'); el.textContent = '正常'; }
-    else if (status === 'fail') { el.classList.add('status-fail'); el.textContent = '失败'; }
+    else if (status === 'fail') { el.classList.add('status-fail'); el.textContent = '全部失败'; }
     else { el.classList.add('status-testing'); el.textContent = '检测中...'; }
 }
 
 function setDetectedLang(code) {
     const el = document.getElementById('detectedLang');
     if (!code) { el.innerHTML = '检测到语言：<span class="lang-name">—</span>'; return; }
-    const name = languages[code] || code;
-    el.innerHTML = `检测到语言：<span class="lang-name">${name}</span> (${code})`;
+    el.innerHTML = `检测到语言：<span class="lang-name">${languages[code] || code}</span> (${code})`;
 }
 
-async function testApi() {
-    setApiStatus('testing');
-    const key = document.getElementById('apiSelect').value;
-    const cfg = apiEndpoints[key];
-    if (!cfg) { setApiStatus('fail'); return false; }
-    var url;
-    if (key === 'auto') {
-        url = buildGoogleUrl('hello', 'zh-CN', 'at');
-    } else {
-        url = cfg.build('hello', 'zh-CN');
-    }
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 6000);
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeout);
-        if (!res.ok) { setApiStatus('fail'); return false; }
-        const data = await res.json();
-        const result = (key === 'auto' ? data[0].map(item => item[0]).join('') : cfg.parse(data));
-        const ok = result && result.length > 0;
-        setApiStatus(ok ? 'ok' : 'fail');
-        return ok;
-    } catch (e) {
-        console.error('接口检测失败:', e);
-        setApiStatus('fail');
-        return false;
-    }
-}
-
-/* ===== 带超时的 fetch ===== */
+/* 带超时 fetch */
 function fetchWithTimeout(url, options, timeoutMs) {
     var ctrl = new AbortController();
     var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
@@ -1277,7 +1214,7 @@ function fetchWithTimeout(url, options, timeoutMs) {
     });
 }
 
-/* ===== 单通道：Google ===== */
+/* 单个谷歌通道请求 */
 async function fetchGoogleChannel(text, target, client, signal) {
     var url = buildGoogleUrl(text, target, client);
     var res = await fetchWithTimeout(url, { signal: signal }, 7000);
@@ -1290,33 +1227,10 @@ async function fetchGoogleChannel(text, target, client, signal) {
     if (!data || !data[0]) throw new Error('BAD_RESPONSE');
     var translated = (data[0] || []).map(function (seg) { return seg[0] || ''; }).join('');
     if (!translated) throw new Error('EMPTY_TRANSLATION');
-    return { translated: translated, detected: data[2] || null, via: 'google', channel: client };
+    return { translated: translated, detected: data[2] || null, via: 'google' };
 }
 
-/* ===== 备用通道：MyMemory ===== */
-var MYMEM_LANG = {
-    en: 'en', de: 'de', 'zh-CN': 'zh-CN', 'zh-TW': 'zh-TW',
-    fr: 'fr', es: 'es', it: 'it', pt: 'pt', ru: 'ru',
-    ar: 'ar', ja: 'ja', ko: 'ko', nl: 'nl', pl: 'pl',
-    tr: 'tr', cs: 'cs', sv: 'sv', da: 'da', el: 'el',
-    uk: 'uk', he: 'he', th: 'th', vi: 'vi', hi: 'hi',
-    ro: 'ro', sk: 'sk', hu: 'hu', ca: 'ca', bg: 'bg',
-    et: 'et', lt: 'lt', lv: 'lv', sl: 'sl', hr: 'hr',
-    sr: 'sr', fa: 'fa', ur: 'ur', id: 'id', ms: 'ms',
-    fi: 'fi', no: 'no', sq: 'sq', mk: 'mk', az: 'az',
-    be: 'be', ka: 'ka', kk: 'kk', hy: 'hy', ta: 'ta',
-    te: 'te', ml: 'ml', kn: 'kn', bn: 'bn', ne: 'ne',
-    si: 'si', my: 'my', km: 'km', lo: 'lo', sw: 'sw',
-    af: 'af', cy: 'cy', ga: 'ga', mt: 'mt', is: 'is',
-    eu: 'eu', gl: 'gl', bs: 'bs', am: 'am', zu: 'zu',
-    xh: 'xh', sn: 'sn', ny: 'ny', mg: 'mg', yo: 'yo',
-    ig: 'ig', ha: 'ha', st: 'st', tl: 'tl', ceb: 'ceb',
-    jw: 'jw', su: 'su', lb: 'lb', fy: 'fy', gd: 'gd',
-    uz: 'uz', ky: 'ky', tg: 'tg', mn: 'mn', ps: 'ps', sd: 'sd',
-    gu: 'gu', pa: 'pa', or: 'or', as: 'as', ht: 'ht',
-    mi: 'mi', haw: 'haw', sm: 'sm', fj: 'fj'
-};
-
+/* 源语言启发式检测（MyMemory 用） */
 function guessSourceLang(text) {
     var cjk = text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g);
     var kana = text.match(/[\u3040-\u30ff]/g);
@@ -1332,11 +1246,12 @@ function guessSourceLang(text) {
     return m[cnt.indexOf(max)];
 }
 
+/* MyMemory 备用通道 */
 async function fetchMyMemory(text, target, signal, detectedLang) {
     var code = MYMEM_LANG[target];
     if (!code) { var err = new Error('FALLBACK_UNSUPPORTED'); err.unsupported = true; throw err; }
     var src = MYMEM_LANG[detectedLang] || MYMEM_LANG[guessSourceLang(text)] || 'en';
-    if (src === code) return { translated: text, detected: src, via: 'mymemory', channel: 'mymemory' };
+    if (src === code) return { translated: text, detected: src, via: 'mymemory' };
     var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) +
         '&langpair=' + encodeURIComponent(src) + '|' + encodeURIComponent(code);
     var res = await fetch(url, { signal: signal });
@@ -1358,47 +1273,20 @@ async function fetchMyMemory(text, target, signal, detectedLang) {
     }
     var trans = data.responseData.translatedText;
     if (!trans || trans === text || /(INVALID|UNSUPPORTED|NOT SUPPORTED)/i.test(trans)) throw new Error('MYMEM_EMPTY');
-    return { translated: trans, detected: src, via: 'mymemory', channel: 'mymemory' };
+    return { translated: trans, detected: src, via: 'mymemory' };
 }
 
-/* ===== 核心：自动按通道降级翻译 ===== */
+/* 核心：全自动通道降级 */
 async function translateTo(text, targetLang) {
     var signal = state.controller ? state.controller.signal : null;
     var lastErr = null;
     var detectedLang = state.detected || null;
-    var key = currentApi;
 
-    // 如果用户选了「仅用某通道」，只走那一个
-    if (key !== 'auto') {
-        var cfg = apiEndpoints[key];
-        var url = cfg.build(text, targetLang);
-        try {
-            var res = await fetchWithTimeout(url, { signal: signal }, 7000);
-            if (!res.ok) { setApiStatus('fail'); throw new Error('HTTP ' + res.status); }
-            var data = await res.json();
-            var result = cfg.parse(data);
-            if (cfg.detectLang) {
-                var detected = cfg.detectLang(data);
-                if (detected && detected !== lastDetectedLang) {
-                    lastDetectedLang = detected;
-                    setDetectedLang(detected);
-                }
-            }
-            setApiStatus('ok');
-            return { translated: result || '翻译失败', detected: detected, via: 'google' };
-        } catch (e) {
-            setApiStatus('fail');
-            throw e;
-        }
-    }
-
-    // auto 模式：依次尝试 3 个 Google client 通道
+    // 1) 依次尝试 3 个 Google client
     for (var i = 0; i < GOOGLE_CHANNELS.length; i++) {
-        var ch = GOOGLE_CHANNELS[i];
         try {
-            var r = await fetchGoogleChannel(text, targetLang, ch.client, signal);
+            var r = await fetchGoogleChannel(text, targetLang, GOOGLE_CHANNELS[i], signal);
             if (r.detected && !detectedLang) detectedLang = r.detected;
-            setApiStatus('ok');
             return r;
         } catch (e) {
             if (e.name === 'AbortError') throw e;
@@ -1406,14 +1294,11 @@ async function translateTo(text, targetLang) {
         }
     }
 
-    // Google 全失败 → 降级 MyMemory
+    // 2) Google 全失败 → MyMemory
     try {
-        var r2 = await fetchMyMemory(text, targetLang, signal, detectedLang);
-        setApiStatus('ok');
-        return r2;
+        return await fetchMyMemory(text, targetLang, signal, detectedLang);
     } catch (e2) {
         if (e2.name === 'AbortError') throw e2;
-        setApiStatus('fail');
         if (e2.unsupported) throw e2;
         if (lastErr && lastErr.rateLimited) {
             var combined = new Error('ALL_CHANNELS_RATE_LIMITED');
@@ -1425,7 +1310,7 @@ async function translateTo(text, targetLang) {
     }
 }
 
-/* ===== 显示通道徽章 ===== */
+/* 显示备用通道徽章 */
 function setViaBadge(idx, via) {
     var badge = document.querySelector('.via-badge[data-index="' + idx + '"]');
     if (!badge) return;
@@ -1437,10 +1322,50 @@ function setViaBadge(idx, via) {
     }
 }
 
-/* ===== 防抖 ===== */
+/* 状态检测：同样走多通道，任意一个成功就算正常 */
+async function testApi() {
+    setApiStatus('testing');
+    // 依次尝试 3 个谷歌通道
+    for (var i = 0; i < GOOGLE_CHANNELS.length; i++) {
+        try {
+            var url = buildGoogleUrl('hello', 'zh-CN', GOOGLE_CHANNELS[i]);
+            var controller = new AbortController();
+            var timeout = setTimeout(function () { controller.abort(); }, 5000);
+            var res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeout);
+            if (res.ok) {
+                var data = await res.json();
+                var result = (data[0] || []).map(function (item) { return item[0]; }).join('');
+                if (result && result.length > 0) {
+                    setApiStatus('ok');
+                    return true;
+                }
+            }
+        } catch (e) {
+            // 继续试下一个通道
+        }
+    }
+    // 谷歌全失败 → 试 MyMemory
+    try {
+        var controller2 = new AbortController();
+        var timeout2 = setTimeout(function () { controller2.abort(); }, 5000);
+        var res2 = await fetch('https://api.mymemory.translated.net/get?q=hello&langpair=en|zh-CN', { signal: controller2.signal });
+        clearTimeout(timeout2);
+        if (res2.ok) {
+            var data2 = await res2.json();
+            if (data2 && data2.responseData && data2.responseData.translatedText) {
+                setApiStatus('ok');
+                return true;
+            }
+        }
+    } catch (e) {}
+    setApiStatus('fail');
+    return false;
+}
+
 function debounce(fn,delay){let timer=null; return function(...args){clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args),delay);}}
 
-/* ===== 实时翻译（支持自动重试） ===== */
+/* 单个目标语言翻译（含自动重试） */
 var RETRY_INTERVAL = 30000;
 var MAX_RETRIES = 30;
 
@@ -1448,7 +1373,8 @@ function doTranslateOne(idx, text, lang, attempt) {
     if (typeof attempt !== 'number') attempt = 0;
     var resultEl = document.getElementById(['result1','result2','result3'][idx]);
     if (attempt >= MAX_RETRIES) {
-        resultEl.innerText = '多次尝试后翻译服务仍被限流，请稍后重新输入';
+        resultEl.innerText = '多次尝试后所有翻译通道仍不可用，请稍后重新输入';
+        setViaBadge(idx, null);
         return;
     }
     if (!state.controller || state.controller.signal.aborted) {
@@ -1467,9 +1393,9 @@ function doTranslateOne(idx, text, lang, attempt) {
         var errText;
         if (e && e.unsupported) errText = '该语言暂不受备用通道支持，正在自动重试…';
         else if (e && e.mymemQuota) errText = '备用通道今日额度已用完，额度恢复后自动完成';
-        else if (e && e.rateLimited && e.waitMinutes) errText = '翻译接口暂时限流，约 ' + e.waitMinutes + ' 分钟后恢复，正在自动重试…';
-        else if (e && e.rateLimited) errText = '翻译接口暂时限流，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
-        else errText = '翻译服务暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
+        else if (e && e.rateLimited && e.waitMinutes) errText = '所有翻译接口暂时限流，约 ' + e.waitMinutes + ' 分钟后恢复，正在自动重试…';
+        else if (e && e.rateLimited) errText = '所有翻译接口暂时限流，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
+        else errText = '所有翻译通道暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
         resultEl.innerText = errText;
         setViaBadge(idx, null);
         state.retryTimers[idx] = setTimeout(function () {
@@ -1479,27 +1405,25 @@ function doTranslateOne(idx, text, lang, attempt) {
     });
 }
 
+/* 实时翻译（3 个目标语言并发） */
 const translateText = debounce(async ()=>{
     const text = document.getElementById('inputText').value.trim();
     if (state.controller) state.controller.abort();
-    // 清除旧的重试定时器
     Object.keys(state.retryTimers).forEach(function (k) { clearTimeout(state.retryTimers[k]); });
     state.retryTimers = {};
     state.controller = new AbortController();
 
-    ['result1','result2','result3'].forEach((id,i)=>document.getElementById(id).innerText=text?'翻译中...':'');
+    ['result1','result2','result3'].forEach((id,i)=>{
+        document.getElementById(id).innerText = text ? '翻译中...' : '';
+        setViaBadge(i, null);
+    });
+
     if(!text) { setDetectedLang(''); lastDetectedLang = ''; state.detected = null; return; }
     state.detected = null;
 
     const langs=['targetLang1','targetLang2','targetLang3'].map(id=>document.getElementById(id).value);
     langs.forEach(function (lang, idx) { doTranslateOne(idx, text, lang); });
 },500);
-
-document.getElementById('apiSelect').addEventListener('change', async function() {
-    currentApi = this.value;
-    await testApi();
-    if (document.getElementById('inputText').value.trim()) translateText();
-});
 
 document.getElementById('inputText').addEventListener('input',translateText);
 document.getElementById('clearInput').addEventListener('click',()=>{
@@ -2011,7 +1935,7 @@ function closeCellFilter() {
     document.getElementById('cellFilterModal').classList.remove('open');
 }
 
-/* ===== 读取单元格文本：保留 <br> 换行 ===== */
+/* 读取单元格文本：保留 <br> 换行 */
 function getCellText(cell) {
     const clone = cell.cloneNode(true);
     clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
