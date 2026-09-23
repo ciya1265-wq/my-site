@@ -701,15 +701,6 @@ textarea {
 .cell-filter-box h4 { margin: 0 0 14px 0; font-size: 16px; }
 .cell-filter-row { margin-bottom: 12px; }
 .cell-filter-row label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: bold; }
-.cell-filter-row .readonly-value {
-    padding: 8px 12px;
-    background: #f0f7ff;
-    border: 1px solid #d0e3ff;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #1976d2;
-    font-weight: bold;
-}
 .cell-filter-row input[type="text"] {
     width: 100%;
     padding: 8px 10px;
@@ -950,7 +941,7 @@ textarea {
                 <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
                 <button onclick="toggleWrap()" id="wrapToggleBtn" title="切换表格自动换行">🔁 自动换行</button>
                 <button onclick="toggleVerticalAlign()" id="valignBtn" title="切换表格单元格垂直对齐">⬆ 顶部对齐</button>
-                <button onclick="openCellFilter()" title="按当前单元格筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
+                <button onclick="openCellFilter()" title="按列筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
             </div>
         </div>
         <div id="noteEditor" contenteditable="true"></div>
@@ -980,13 +971,13 @@ textarea {
     </div>
 </div>
 
-<!-- 单元格筛选弹窗 -->
+<!-- 单元格筛选弹窗（手动选列） -->
 <div id="cellFilterModal">
     <div class="cell-filter-box">
-        <h4>按单元格筛选</h4>
+        <h4>按列筛选</h4>
         <div class="cell-filter-row">
-            <label>当前列（自动识别）</label>
-            <div class="readonly-value" id="filterColName">—</div>
+            <label>选择要筛选的列</label>
+            <select id="filterColumnSelect"></select>
         </div>
         <div class="cell-filter-row">
             <label>筛选值（手动输入）</label>
@@ -1055,7 +1046,6 @@ const languages = {
 };
 const sortedLangs = Object.entries(languages).sort((a,b)=>a[1].localeCompare(b[1]));
 
-/* 谷歌 3 个 client 通道 */
 const GOOGLE_CHANNELS = ['at', 'dict-chrome-ex', 'gtx'];
 
 function buildGoogleUrl(text, lang, client) {
@@ -1063,7 +1053,6 @@ function buildGoogleUrl(text, lang, client) {
         '&sl=auto&tl=' + encodeURIComponent(lang) + '&dt=t&q=' + encodeURIComponent(text);
 }
 
-/* 备用通道语言映射 */
 var MYMEM_LANG = {
     en:'en',de:'de','zh-CN':'zh-CN','zh-TW':'zh-TW',
     fr:'fr',es:'es',it:'it',pt:'pt',ru:'ru',
@@ -1087,7 +1076,6 @@ var MYMEM_LANG = {
     mi:'mi',haw:'haw',sm:'sm',fj:'fj'
 };
 
-/* 状态 */
 var state = {
     controller: null,
     retryTimers: {},
@@ -1095,7 +1083,6 @@ var state = {
 };
 var lastDetectedLang = '';
 
-/* 语言搜索下拉（目标语言） */
 function initSearchableSelects() {
     document.querySelectorAll('.searchable-select').forEach(wrap => {
         const input = wrap.querySelector('input[type="text"]');
@@ -1190,7 +1177,6 @@ function setDetectedLang(code) {
     el.innerHTML = `检测到语言：<span class="lang-name">${languages[code] || code}</span> (${code})`;
 }
 
-/* 带超时 fetch */
 function fetchWithTimeout(url, options, timeoutMs) {
     var ctrl = new AbortController();
     var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
@@ -1214,7 +1200,6 @@ function fetchWithTimeout(url, options, timeoutMs) {
     });
 }
 
-/* 单个谷歌通道请求 */
 async function fetchGoogleChannel(text, target, client, signal) {
     var url = buildGoogleUrl(text, target, client);
     var res = await fetchWithTimeout(url, { signal: signal }, 7000);
@@ -1230,7 +1215,6 @@ async function fetchGoogleChannel(text, target, client, signal) {
     return { translated: translated, detected: data[2] || null, via: 'google' };
 }
 
-/* 源语言启发式检测（MyMemory 用） */
 function guessSourceLang(text) {
     var cjk = text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g);
     var kana = text.match(/[\u3040-\u30ff]/g);
@@ -1246,7 +1230,6 @@ function guessSourceLang(text) {
     return m[cnt.indexOf(max)];
 }
 
-/* MyMemory 备用通道 */
 async function fetchMyMemory(text, target, signal, detectedLang) {
     var code = MYMEM_LANG[target];
     if (!code) { var err = new Error('FALLBACK_UNSUPPORTED'); err.unsupported = true; throw err; }
@@ -1276,13 +1259,11 @@ async function fetchMyMemory(text, target, signal, detectedLang) {
     return { translated: trans, detected: src, via: 'mymemory' };
 }
 
-/* 核心：全自动通道降级 */
 async function translateTo(text, targetLang) {
     var signal = state.controller ? state.controller.signal : null;
     var lastErr = null;
     var detectedLang = state.detected || null;
 
-    // 1) 依次尝试 3 个 Google client
     for (var i = 0; i < GOOGLE_CHANNELS.length; i++) {
         try {
             var r = await fetchGoogleChannel(text, targetLang, GOOGLE_CHANNELS[i], signal);
@@ -1294,7 +1275,6 @@ async function translateTo(text, targetLang) {
         }
     }
 
-    // 2) Google 全失败 → MyMemory
     try {
         return await fetchMyMemory(text, targetLang, signal, detectedLang);
     } catch (e2) {
@@ -1310,7 +1290,6 @@ async function translateTo(text, targetLang) {
     }
 }
 
-/* 显示备用通道徽章 */
 function setViaBadge(idx, via) {
     var badge = document.querySelector('.via-badge[data-index="' + idx + '"]');
     if (!badge) return;
@@ -1322,10 +1301,8 @@ function setViaBadge(idx, via) {
     }
 }
 
-/* 状态检测：同样走多通道，任意一个成功就算正常 */
 async function testApi() {
     setApiStatus('testing');
-    // 依次尝试 3 个谷歌通道
     for (var i = 0; i < GOOGLE_CHANNELS.length; i++) {
         try {
             var url = buildGoogleUrl('hello', 'zh-CN', GOOGLE_CHANNELS[i]);
@@ -1341,11 +1318,8 @@ async function testApi() {
                     return true;
                 }
             }
-        } catch (e) {
-            // 继续试下一个通道
-        }
+        } catch (e) {}
     }
-    // 谷歌全失败 → 试 MyMemory
     try {
         var controller2 = new AbortController();
         var timeout2 = setTimeout(function () { controller2.abort(); }, 5000);
@@ -1365,7 +1339,6 @@ async function testApi() {
 
 function debounce(fn,delay){let timer=null; return function(...args){clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args),delay);}}
 
-/* 单个目标语言翻译（含自动重试） */
 var RETRY_INTERVAL = 30000;
 var MAX_RETRIES = 30;
 
@@ -1405,7 +1378,6 @@ function doTranslateOne(idx, text, lang, attempt) {
     });
 }
 
-/* 实时翻译（3 个目标语言并发） */
 const translateText = debounce(async ()=>{
     const text = document.getElementById('inputText').value.trim();
     if (state.controller) state.controller.abort();
@@ -1892,7 +1864,7 @@ function applyVAlignSetting() {
     `;
 }
 
-/* ===== 按单元格筛选 ===== */
+/* ===== 按列筛选（手动选列） ===== */
 let filterTarget = null;
 
 function getCurrentCell() {
@@ -1908,34 +1880,99 @@ function getCurrentCell() {
     return null;
 }
 
+/* 打开筛选弹窗：动态读取当前表格表头 */
 function openCellFilter() {
     const cell = getCurrentCell();
-    if (!cell) {
-        alert('请先把光标放在表格的某个单元格里，再点击「筛选」');
-        return;
+    let table = null;
+
+    if (cell) {
+        table = cell.closest('table');
+    } else {
+        const tables = noteEditor.querySelectorAll('table');
+        if (tables.length === 1) {
+            table = tables[0];
+        } else if (tables.length === 0) {
+            alert('当前笔记里没有表格，请先插入一个表格');
+            return;
+        } else {
+            alert('请先把光标放到要筛选的表格里，再点击「筛选」');
+            return;
+        }
     }
-    const row = cell.parentElement;
-    const colIndex = Array.from(row.children).indexOf(cell);
-    const table = cell.closest('table');
-    const firstRow = table.querySelector('tr');
-    const headerCell = firstRow.children[colIndex];
-    const colName = headerCell ? headerCell.innerText.trim() : `第${colIndex + 1}列`;
 
-    filterTarget = { table, colIndex, colName };
+    if (!table) { alert('没有找到可筛选的表格'); return; }
 
-    document.getElementById('filterColName').textContent = colName;
+    const { grid } = parseTableGrid(table);
+    if (grid.length < 2) { alert('表格没有数据行'); return; }
+
+    const headerRow = grid[0];
+    const colNames = headerRow.map((t, i) => (t && t.trim()) ? t.trim() : `第${i + 1}列`);
+
+    const colSelect = document.getElementById('filterColumnSelect');
+    colSelect.innerHTML = '';
+    colNames.forEach((name, idx) => {
+        colSelect.add(new Option(`${idx + 1}. ${name}`, idx));
+    });
+
+    if (cell) {
+        const preselect = getCellGridColumnIndex(cell, table);
+        if (preselect >= 0 && preselect < colNames.length) {
+            colSelect.value = preselect;
+        }
+    }
+
     document.getElementById('filterInputValue').value = '';
     document.getElementById('filterMode').value = 'contains';
 
+    filterTarget = { table: table };
+
     document.getElementById('cellFilterModal').classList.add('open');
     setTimeout(() => document.getElementById('filterInputValue').focus(), 50);
+}
+
+/* 计算某个 DOM 单元格在解析后的网格里属于第几列（处理 rowspan/colspan） */
+function getCellGridColumnIndex(cell, table) {
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const totalCols = rows[0] ? rows[0].children.length : 0;
+
+    let cellRow = cell.parentElement;
+    const rowIndex = rows.indexOf(cellRow);
+    if (rowIndex === -1) return -1;
+
+    const occupied = [];
+    for (let r = 0; r < rows.length; r++) occupied[r] = new Array(totalCols).fill(false);
+
+    for (let r = 0; r < rows.length; r++) {
+        const cells = Array.from(rows[r].children);
+        let colIdx = 0;
+        for (const c of cells) {
+            while (colIdx < totalCols && occupied[r][colIdx]) colIdx++;
+            if (colIdx >= totalCols) break;
+
+            const rowspan = parseInt(c.getAttribute('rowspan')) || 1;
+            const colspan = parseInt(c.getAttribute('colspan')) || 1;
+
+            if (c === cell && r === rowIndex) {
+                return colIdx;
+            }
+
+            for (let dr = 0; dr < rowspan; dr++) {
+                for (let dc = 0; dc < colspan; dc++) {
+                    if (r + dr < rows.length && colIdx + dc < totalCols) {
+                        occupied[r + dr][colIdx + dc] = true;
+                    }
+                }
+            }
+            colIdx += colspan;
+        }
+    }
+    return -1;
 }
 
 function closeCellFilter() {
     document.getElementById('cellFilterModal').classList.remove('open');
 }
 
-/* 读取单元格文本：保留 <br> 换行 */
 function getCellText(cell) {
     const clone = cell.cloneNode(true);
     clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
@@ -2034,13 +2071,18 @@ function applyCellFilter() {
     const value = document.getElementById('filterInputValue').value.trim().toLowerCase();
     if (!value) { alert('请输入筛选值'); return; }
     const mode = document.getElementById('filterMode').value;
-    const { table, colIndex, colName } = filterTarget;
+    const table = filterTarget.table;
+
+    const colSelect = document.getElementById('filterColumnSelect');
+    const colIndex = parseInt(colSelect.value, 10);
+    if (isNaN(colIndex)) { alert('请选择要筛选的列'); return; }
 
     const { grid } = parseTableGrid(table);
     if (grid.length < 2) { alert('表格没有数据行'); return; }
 
     const headerRow = grid[0];
     const dataRows = grid.slice(1);
+    const colName = headerRow[colIndex] || `第${colIndex + 1}列`;
 
     const matchedRows = dataRows.filter(row => {
         const cellText = (row[colIndex] || '').toLowerCase();
