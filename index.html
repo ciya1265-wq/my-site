@@ -188,6 +188,43 @@ body {
     color: #e65100 !important;
 }
 
+/* 表格操作下拉菜单 */
+#tableMenu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 500;
+    min-width: 160px;
+    padding: 4px;
+    margin-top: 4px;
+}
+#tableMenu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    border-radius: 4px;
+}
+#tableMenu button:hover {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+#tableMenu .divider {
+    height: 1px;
+    background: #eee;
+    margin: 4px 0;
+}
+
 #noteEditor {
     flex: 1;
     overflow-y: auto;
@@ -679,7 +716,11 @@ textarea {
 .find-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .find-modal-actions button { padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; }
 .find-modal-actions .btn-primary { background: #1976d2; color: #fff; }
+.find-modal-actions .btn-primary:hover { background: #1565c0; }
 .find-modal-actions .btn-secondary { background: #e0e0e0; color: #333; }
+.find-modal-actions .btn-secondary:hover { background: #d0d0d0; }
+.find-modal-actions .btn-find { background: #0288d1; color: #fff; }
+.find-modal-actions .btn-find:hover { background: #0277bd; }
 
 #cellFilterModal {
     display: none;
@@ -927,7 +968,22 @@ textarea {
                 <button onclick="formatBlock('p')" title="正文">正文</button>
                 <button onclick="formatBlock('blockquote')" title="引用">❝</button>
                 <button onclick="insertCodeBlock()" title="代码块">代码</button>
-                <button onclick="insertTable()" title="表格">⊞</button>
+                <div style="position:relative;display:inline-block;">
+                    <button onclick="toggleTableMenu(event)" title="表格操作">⊞ 表格 ▾</button>
+                    <div id="tableMenu">
+                        <button onclick="insertTable(2,2);closeTableMenu()">插入 2×2 表格</button>
+                        <button onclick="insertTable(3,3);closeTableMenu()">插入 3×3 表格</button>
+                        <button onclick="insertTable(4,4);closeTableMenu()">插入 4×4 表格</button>
+                        <div class="divider"></div>
+                        <button onclick="tableInsertRow();closeTableMenu()">下方插入行</button>
+                        <button onclick="tableInsertRowAbove();closeTableMenu()">上方插入行</button>
+                        <button onclick="tableDeleteRow();closeTableMenu()">删除当前行</button>
+                        <div class="divider"></div>
+                        <button onclick="tableInsertCol();closeTableMenu()">右侧插入列</button>
+                        <button onclick="tableInsertColLeft();closeTableMenu()">左侧插入列</button>
+                        <button onclick="tableDeleteCol();closeTableMenu()">删除当前列</button>
+                    </div>
+                </div>
                 <button onclick="insertLink()" title="超链接">🔗</button>
                 <button onclick="insertImage()" title="插入图片">🖼</button>
                 <button onclick="insertHr()" title="分隔线">—</button>
@@ -941,7 +997,7 @@ textarea {
                 <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
                 <button onclick="toggleWrap()" id="wrapToggleBtn" title="切换表格自动换行">🔁 自动换行</button>
                 <button onclick="toggleVerticalAlign()" id="valignBtn" title="切换表格单元格垂直对齐">⬆ 顶部对齐</button>
-                <button onclick="openCellFilter()" title="按列筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
+                <button onclick="openCellFilter()" title="按当前单元格筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
             </div>
         </div>
         <div id="noteEditor" contenteditable="true"></div>
@@ -965,19 +1021,21 @@ textarea {
             <input type="text" id="replaceText" placeholder="输入替换后的内容">
         </div>
         <div class="find-modal-actions">
-            <button class="btn-secondary" onclick="closeFindReplace()">取消</button>
+            <button class="btn-secondary" onclick="closeFindReplace()">关闭</button>
+            <button class="btn-find" onclick="doFind()">查找下一个</button>
+            <button class="btn-primary" onclick="doReplaceOne()">替换</button>
             <button class="btn-primary" onclick="doReplaceAll()">全部替换</button>
         </div>
     </div>
 </div>
 
-<!-- 单元格筛选弹窗（手动选列） -->
+<!-- 单元格筛选弹窗 -->
 <div id="cellFilterModal">
     <div class="cell-filter-box">
-        <h4>按列筛选</h4>
+        <h4>按单元格筛选</h4>
         <div class="cell-filter-row">
-            <label>选择要筛选的列</label>
-            <select id="filterColumnSelect"></select>
+            <label>当前列（自动识别）</label>
+            <div class="readonly-value" id="filterColName">—</div>
         </div>
         <div class="cell-filter-row">
             <label>筛选值（手动输入）</label>
@@ -1769,11 +1827,24 @@ function insertCodeBlock() {
     document.execCommand("insertHTML", false, html);
     updateNoteStatus();
 }
-function insertTable() {
-    const html = `<table><tr><th>标题1</th><th>标题2</th></tr><tr><td>内容</td><td>内容</td></tr></table>`;
-    document.execCommand("insertHTML", false, html);
+
+/* 插入指定行列数的表格 */
+function insertTable(rows, cols) {
+    if (typeof rows !== 'number') rows = 2;
+    if (typeof cols !== 'number') cols = 2;
+    let html = '<table>';
+    for (let r = 0; r < rows; r++) {
+        html += '<tr>';
+        for (let c = 0; c < cols; c++) {
+            html += (r === 0) ? '<th>标题</th>' : '<td>内容</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</table><p><br></p>';
+    document.execCommand('insertHTML', false, html);
     updateNoteStatus();
 }
+
 function insertLink() {
     const url = prompt("输入链接");
     if (url) { document.execCommand("createLink", false, url); updateNoteStatus(); }
@@ -1786,6 +1857,138 @@ function insertHr() {
     document.execCommand("insertHorizontalRule", false, null);
     updateNoteStatus();
 }
+
+/* ===== 表格行列操作 ===== */
+function findCellInEditor() {
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return null;
+    let node = sel.anchorNode;
+    while (node && node !== noteEditor) {
+        if (node.nodeType === 1 && (node.tagName === 'TD' || node.tagName === 'TH')) {
+            return node;
+        }
+        node = node.parentNode;
+    }
+    return null;
+}
+function findRowInEditor() {
+    const cell = findCellInEditor();
+    if (!cell) return null;
+    return cell.parentElement;
+}
+function findTableInEditor() {
+    const cell = findCellInEditor();
+    if (!cell) return null;
+    return cell.closest('table');
+}
+function getCurrentColIndex() {
+    const cell = findCellInEditor();
+    const table = findTableInEditor();
+    if (!cell || !table) return -1;
+    const row = cell.parentElement;
+    const cells = Array.from(row.children);
+    let colIdx = 0;
+    for (const c of cells) {
+        if (c === cell) return colIdx;
+        colIdx += parseInt(c.getAttribute('colspan')) || 1;
+    }
+    return -1;
+}
+function tableInsertRow() {
+    const row = findRowInEditor();
+    if (!row) { alert('请先把光标放在表格的单元格里'); return; }
+    const colCount = row.children.length;
+    const newRow = document.createElement('tr');
+    for (let i = 0; i < colCount; i++) {
+        const td = document.createElement('td');
+        td.textContent = '内容';
+        newRow.appendChild(td);
+    }
+    row.parentNode.insertBefore(newRow, row.nextSibling);
+    saveCurrent();
+}
+function tableInsertRowAbove() {
+    const row = findRowInEditor();
+    if (!row) { alert('请先把光标放在表格的单元格里'); return; }
+    const colCount = row.children.length;
+    const newRow = document.createElement('tr');
+    for (let i = 0; i < colCount; i++) {
+        const td = document.createElement('td');
+        td.textContent = '内容';
+        newRow.appendChild(td);
+    }
+    row.parentNode.insertBefore(newRow, row);
+    saveCurrent();
+}
+function tableDeleteRow() {
+    const row = findRowInEditor();
+    const table = findTableInEditor();
+    if (!row || !table) { alert('请先把光标放在表格的单元格里'); return; }
+    if (table.querySelectorAll('tr').length <= 1) {
+        alert('表格只剩一行，不能删除');
+        return;
+    }
+    row.parentNode.removeChild(row);
+    saveCurrent();
+}
+function tableInsertCol() {
+    const table = findTableInEditor();
+    if (!table) { alert('请先把光标放在表格的单元格里'); return; }
+    const rows = table.querySelectorAll('tr');
+    rows.forEach((row, rIdx) => {
+        const newCell = document.createElement(rIdx === 0 ? 'th' : 'td');
+        newCell.textContent = rIdx === 0 ? '标题' : '内容';
+        row.appendChild(newCell);
+    });
+    saveCurrent();
+}
+function tableInsertColLeft() {
+    const cell = findCellInEditor();
+    if (!cell) { alert('请先把光标放在表格的单元格里'); return; }
+    const row = cell.parentElement;
+    const newCell = document.createElement(row.children[0] && row.children[0].tagName === 'TH' ? 'th' : 'td');
+    newCell.textContent = '内容';
+    row.insertBefore(newCell, cell);
+    saveCurrent();
+}
+function tableDeleteCol() {
+    const table = findTableInEditor();
+    const colIdx = getCurrentColIndex();
+    if (!table || colIdx < 0) { alert('请先把光标放在表格的单元格里'); return; }
+    const rows = table.querySelectorAll('tr');
+    if (rows[0] && rows[0].children.length <= 1) {
+        alert('表格只剩一列，不能删除');
+        return;
+    }
+    rows.forEach(row => {
+        const cells = Array.from(row.children);
+        let curCol = 0;
+        for (const c of cells) {
+            const cs = parseInt(c.getAttribute('colspan')) || 1;
+            if (colIdx >= curCol && colIdx < curCol + cs) {
+                if (cs > 1) {
+                    c.setAttribute('colspan', cs - 1);
+                } else {
+                    c.parentNode.removeChild(c);
+                }
+                break;
+            }
+            curCol += cs;
+        }
+    });
+    saveCurrent();
+}
+function toggleTableMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('tableMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+function closeTableMenu() {
+    document.getElementById('tableMenu').style.display = 'none';
+}
+document.addEventListener('click', function () {
+    closeTableMenu();
+});
 
 /* ===== 表格自动换行 ===== */
 let autoWrap = true;
@@ -1864,7 +2067,7 @@ function applyVAlignSetting() {
     `;
 }
 
-/* ===== 按列筛选（手动选列） ===== */
+/* ===== 按单元格筛选 ===== */
 let filterTarget = null;
 
 function getCurrentCell() {
@@ -1880,93 +2083,27 @@ function getCurrentCell() {
     return null;
 }
 
-/* 打开筛选弹窗：动态读取当前表格表头 */
 function openCellFilter() {
     const cell = getCurrentCell();
-    let table = null;
-
-    if (cell) {
-        table = cell.closest('table');
-    } else {
-        const tables = noteEditor.querySelectorAll('table');
-        if (tables.length === 1) {
-            table = tables[0];
-        } else if (tables.length === 0) {
-            alert('当前笔记里没有表格，请先插入一个表格');
-            return;
-        } else {
-            alert('请先把光标放到要筛选的表格里，再点击「筛选」');
-            return;
-        }
+    if (!cell) {
+        alert('请先把光标放在表格的某个单元格里，再点击「筛选」');
+        return;
     }
+    const row = cell.parentElement;
+    const colIndex = Array.from(row.children).indexOf(cell);
+    const table = cell.closest('table');
+    const firstRow = table.querySelector('tr');
+    const headerCell = firstRow.children[colIndex];
+    const colName = headerCell ? headerCell.innerText.trim() : `第${colIndex + 1}列`;
 
-    if (!table) { alert('没有找到可筛选的表格'); return; }
+    filterTarget = { table, colIndex, colName };
 
-    const { grid } = parseTableGrid(table);
-    if (grid.length < 2) { alert('表格没有数据行'); return; }
-
-    const headerRow = grid[0];
-    const colNames = headerRow.map((t, i) => (t && t.trim()) ? t.trim() : `第${i + 1}列`);
-
-    const colSelect = document.getElementById('filterColumnSelect');
-    colSelect.innerHTML = '';
-    colNames.forEach((name, idx) => {
-        colSelect.add(new Option(`${idx + 1}. ${name}`, idx));
-    });
-
-    if (cell) {
-        const preselect = getCellGridColumnIndex(cell, table);
-        if (preselect >= 0 && preselect < colNames.length) {
-            colSelect.value = preselect;
-        }
-    }
-
+    document.getElementById('filterColName').textContent = colName;
     document.getElementById('filterInputValue').value = '';
     document.getElementById('filterMode').value = 'contains';
 
-    filterTarget = { table: table };
-
     document.getElementById('cellFilterModal').classList.add('open');
     setTimeout(() => document.getElementById('filterInputValue').focus(), 50);
-}
-
-/* 计算某个 DOM 单元格在解析后的网格里属于第几列（处理 rowspan/colspan） */
-function getCellGridColumnIndex(cell, table) {
-    const rows = Array.from(table.querySelectorAll('tr'));
-    const totalCols = rows[0] ? rows[0].children.length : 0;
-
-    let cellRow = cell.parentElement;
-    const rowIndex = rows.indexOf(cellRow);
-    if (rowIndex === -1) return -1;
-
-    const occupied = [];
-    for (let r = 0; r < rows.length; r++) occupied[r] = new Array(totalCols).fill(false);
-
-    for (let r = 0; r < rows.length; r++) {
-        const cells = Array.from(rows[r].children);
-        let colIdx = 0;
-        for (const c of cells) {
-            while (colIdx < totalCols && occupied[r][colIdx]) colIdx++;
-            if (colIdx >= totalCols) break;
-
-            const rowspan = parseInt(c.getAttribute('rowspan')) || 1;
-            const colspan = parseInt(c.getAttribute('colspan')) || 1;
-
-            if (c === cell && r === rowIndex) {
-                return colIdx;
-            }
-
-            for (let dr = 0; dr < rowspan; dr++) {
-                for (let dc = 0; dc < colspan; dc++) {
-                    if (r + dr < rows.length && colIdx + dc < totalCols) {
-                        occupied[r + dr][colIdx + dc] = true;
-                    }
-                }
-            }
-            colIdx += colspan;
-        }
-    }
-    return -1;
 }
 
 function closeCellFilter() {
@@ -2071,18 +2208,13 @@ function applyCellFilter() {
     const value = document.getElementById('filterInputValue').value.trim().toLowerCase();
     if (!value) { alert('请输入筛选值'); return; }
     const mode = document.getElementById('filterMode').value;
-    const table = filterTarget.table;
-
-    const colSelect = document.getElementById('filterColumnSelect');
-    const colIndex = parseInt(colSelect.value, 10);
-    if (isNaN(colIndex)) { alert('请选择要筛选的列'); return; }
+    const { table, colIndex, colName } = filterTarget;
 
     const { grid } = parseTableGrid(table);
     if (grid.length < 2) { alert('表格没有数据行'); return; }
 
     const headerRow = grid[0];
     const dataRows = grid.slice(1);
-    const colName = headerRow[colIndex] || `第${colIndex + 1}列`;
 
     const matchedRows = dataRows.filter(row => {
         const cellText = (row[colIndex] || '').toLowerCase();
@@ -2258,28 +2390,174 @@ function exportPDF() {
     setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
 }
 
+/* ===== 查找替换 ===== */
+let lastFindIndex = -1;
+
 function openFindReplace() {
     document.getElementById('findReplaceModal').classList.add('open');
-    document.getElementById('findText').focus();
+    lastFindIndex = -1;
+    setTimeout(() => document.getElementById('findText').focus(), 50);
 }
+
 function closeFindReplace() {
     document.getElementById('findReplaceModal').classList.remove('open');
     document.getElementById('findText').value = '';
     document.getElementById('replaceText').value = '';
+    lastFindIndex = -1;
+    window.getSelection().removeAllRanges();
 }
+
+function getAllTextNodes() {
+    const walker = document.createTreeWalker(
+        noteEditor,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function (node) {
+                if (!node.nodeValue) return NodeFilter.FILTER_REJECT;
+                if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+    );
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    return nodes;
+}
+
+function doFind() {
+    const find = document.getElementById('findText').value;
+    if (!find) { alert('请输入要查找的内容'); return; }
+
+    const lowerFind = find.toLowerCase();
+    const nodes = getAllTextNodes();
+    let totalMatches = 0;
+    let currentMatch = -1;
+    let foundRange = null;
+
+    outer:
+    for (let i = 0; i < nodes.length; i++) {
+        const text = nodes[i].nodeValue;
+        const lowerText = text.toLowerCase();
+        let startPos = 0;
+        while (true) {
+            const idx = lowerText.indexOf(lowerFind, startPos);
+            if (idx === -1) break;
+            totalMatches++;
+            if (totalMatches === lastFindIndex + 2) {
+                const range = document.createRange();
+                range.setStart(nodes[i], idx);
+                range.setEnd(nodes[i], idx + find.length);
+                foundRange = range;
+                currentMatch = totalMatches;
+                break outer;
+            }
+            startPos = idx + find.length;
+        }
+    }
+
+    if (!foundRange) {
+        lastFindIndex = -1;
+        outer2:
+        for (let i = 0; i < nodes.length; i++) {
+            const text = nodes[i].nodeValue;
+            const lowerText = text.toLowerCase();
+            let startPos = 0;
+            while (true) {
+                const idx = lowerText.indexOf(lowerFind, startPos);
+                if (idx === -1) break;
+                totalMatches++;
+                const range = document.createRange();
+                range.setStart(nodes[i], idx);
+                range.setEnd(nodes[i], idx + find.length);
+                foundRange = range;
+                currentMatch = 1;
+                break outer2;
+            }
+        }
+    }
+
+    if (!foundRange) {
+        noteStatusRight.textContent = '未找到「' + find + '」';
+        noteStatusRight.style.color = '#d93025';
+        return;
+    }
+
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(foundRange);
+    const parentEl = foundRange.startContainer.parentElement;
+    if (parentEl) parentEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+
+    lastFindIndex = currentMatch - 1;
+    noteStatusRight.textContent = '第 ' + currentMatch + '/' + totalMatches + ' 个匹配';
+    noteStatusRight.style.color = '#0288d1';
+}
+
+function doReplaceOne() {
+    const find = document.getElementById('findText').value;
+    const replace = document.getElementById('replaceText').value;
+    if (!find) { alert('请输入要查找的内容'); return; }
+
+    const sel = window.getSelection();
+    if (!sel.rangeCount || sel.isCollapsed) {
+        doFind();
+        return;
+    }
+
+    const range = sel.getRangeAt(0);
+    const selectedText = range.toString();
+    if (selectedText.toLowerCase() !== find.toLowerCase()) {
+        doFind();
+        return;
+    }
+
+    range.deleteContents();
+    range.insertNode(document.createTextNode(replace));
+
+    setTimeout(() => doFind(), 50);
+
+    saveCurrent();
+}
+
 function doReplaceAll() {
     const find = document.getElementById('findText').value;
     const replace = document.getElementById('replaceText').value;
     if (!find) { alert('请输入要查找的内容'); return; }
-    const content = noteEditor.innerHTML;
-    const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(escapeRegExp(find), 'g');
-    const count = (content.match(regex) || []).length;
-    if (count === 0) { alert('未找到「' + find + '」'); return; }
-    noteEditor.innerHTML = content.replace(regex, replace);
+
+    const nodes = getAllTextNodes();
+    const lowerFind = find.toLowerCase();
+    let count = 0;
+
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const node = nodes[i];
+        const text = node.nodeValue;
+        const lowerText = text.toLowerCase();
+        if (lowerText.indexOf(lowerFind) === -1) continue;
+
+        let result = '';
+        let pos = 0;
+        while (true) {
+            const idx = lowerText.indexOf(lowerFind, pos);
+            if (idx === -1) {
+                result += text.slice(pos);
+                break;
+            }
+            result += text.slice(pos, idx) + replace;
+            pos = idx + find.length;
+            count++;
+        }
+        node.nodeValue = result;
+    }
+
+    lastFindIndex = -1;
     saveCurrent();
-    closeFindReplace();
-    alert(`已替换 ${count} 处`);
+
+    if (count === 0) {
+        alert('未找到「' + find + '」');
+    } else {
+        alert(`已替换 ${count} 处`);
+    }
 }
 
 function triggerImport() {
