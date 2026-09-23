@@ -2431,11 +2431,9 @@ function doFind() {
 
     const lowerFind = find.toLowerCase();
     const nodes = getAllTextNodes();
-    let totalMatches = 0;
-    let currentMatch = -1;
-    let foundRange = null;
 
-    outer:
+    // ===== 第一遍：收集所有匹配的位置，并数出总数 =====
+    const matches = [];  // 每项: { node, index, length }
     for (let i = 0; i < nodes.length; i++) {
         const text = nodes[i].nodeValue;
         const lowerText = text.toLowerCase();
@@ -2443,54 +2441,49 @@ function doFind() {
         while (true) {
             const idx = lowerText.indexOf(lowerFind, startPos);
             if (idx === -1) break;
-            totalMatches++;
-            if (totalMatches === lastFindIndex + 2) {
-                const range = document.createRange();
-                range.setStart(nodes[i], idx);
-                range.setEnd(nodes[i], idx + find.length);
-                foundRange = range;
-                currentMatch = totalMatches;
-                break outer;
-            }
+            matches.push({ node: nodes[i], index: idx, length: find.length });
             startPos = idx + find.length;
         }
     }
 
-    if (!foundRange) {
-        lastFindIndex = -1;
-        outer2:
-        for (let i = 0; i < nodes.length; i++) {
-            const text = nodes[i].nodeValue;
-            const lowerText = text.toLowerCase();
-            let startPos = 0;
-            while (true) {
-                const idx = lowerText.indexOf(lowerFind, startPos);
-                if (idx === -1) break;
-                totalMatches++;
-                const range = document.createRange();
-                range.setStart(nodes[i], idx);
-                range.setEnd(nodes[i], idx + find.length);
-                foundRange = range;
-                currentMatch = 1;
-                break outer2;
-            }
-        }
-    }
+    const totalMatches = matches.length;
 
-    if (!foundRange) {
+    // 没找到
+    if (totalMatches === 0) {
         noteStatusRight.textContent = '未找到「' + find + '」';
         noteStatusRight.style.color = '#d93025';
         return;
     }
 
+    // ===== 第二遍：定位到下一个匹配（循环查找） =====
+    // lastFindIndex 表示"上一次停在第几个"（0-based）
+    // 下一个 = lastFindIndex + 1
+    let nextIndex = lastFindIndex + 1;
+
+    // 如果越界，回到第 1 个（循环）
+    if (nextIndex >= totalMatches) {
+        nextIndex = 0;
+    }
+
+    const m = matches[nextIndex];
+
+    // 选中并滚动到可见
+    const range = document.createRange();
+    range.setStart(m.node, m.index);
+    range.setEnd(m.node, m.index + m.length);
+
     const sel = window.getSelection();
     sel.removeAllRanges();
-    sel.addRange(foundRange);
-    const parentEl = foundRange.startContainer.parentElement;
+    sel.addRange(range);
+
+    const parentEl = m.node.parentElement;
     if (parentEl) parentEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
 
-    lastFindIndex = currentMatch - 1;
-    noteStatusRight.textContent = '第 ' + currentMatch + '/' + totalMatches + ' 个匹配';
+    // 记录当前位置（0-based），下次从这里 +1
+    lastFindIndex = nextIndex;
+
+    // 显示「第 X/Y 个匹配」（1-based 给用户看）
+    noteStatusRight.textContent = '第 ' + (nextIndex + 1) + '/' + totalMatches + ' 个匹配';
     noteStatusRight.style.color = '#0288d1';
 }
 
