@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>多功能工具箱</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%239c27b0'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>工</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%239c27b0'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>工</text></svg>">
 <style>
 * { box-sizing: border-box; }
 body {
@@ -189,7 +189,6 @@ body {
     color: #e65100 !important;
 }
 
-/* 表格操作下拉菜单 */
 #tableMenu {
     display: none;
     position: absolute;
@@ -293,7 +292,6 @@ body {
 }
 #noteStatus .left { color: #999; }
 
-/* 筛选结果样式 */
 .filtered-result {
     margin: 10px 0;
     padding: 10px;
@@ -631,16 +629,45 @@ textarea {
    二维码
 ============================================================ */
 .qr-input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-.qr-input-row input {
+.qr-input-wrap {
     flex: 1;
     min-width: 200px;
-    padding: 12px 16px;
+    position: relative;
+    display: flex;
+}
+.qr-input-wrap input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 40px 12px 16px;
     font-size: 15px;
     border: 1px solid #e0e0e0;
     border-radius: 10px;
     outline: none;
 }
-.qr-input-row button {
+.qr-input-wrap #qrcodeInputClear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #666;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.qr-input-wrap #qrcodeInputClear:hover {
+    background: #d0d0d0;
+    color: #333;
+}
+.qr-input-row > button#qrcodeGenerate {
     padding: 12px 28px;
     border: none;
     border-radius: 10px;
@@ -897,7 +924,10 @@ textarea {
     <div class="panel-container">
         <h3 style="margin:0 0 16px 0;font-size:18px;">链接转二维码</h3>
         <div class="qr-input-row">
-            <input type="text" id="qrcodeText" placeholder="https://example.com 或任意文本…">
+            <div class="qr-input-wrap">
+                <input type="text" id="qrcodeText" placeholder="https://example.com 或任意文本…">
+                <button type="button" id="qrcodeInputClear" title="清空" style="display:none;">×</button>
+            </div>
             <button id="qrcodeGenerate">生成</button>
         </div>
         <div class="qr-display" id="qrcodeDisplay">
@@ -981,9 +1011,19 @@ textarea {
                 <div style="position:relative;display:inline-block;">
                     <button onclick="toggleTableMenu(event)" title="表格操作">⊞ 表格 ▾</button>
                     <div id="tableMenu">
-                        <button onclick="insertTable(2,2);closeTableMenu()">插入 2×2 表格</button>
-                        <button onclick="insertTable(3,3);closeTableMenu()">插入 3×3 表格</button>
-                        <button onclick="insertTable(4,4);closeTableMenu()">插入 4×4 表格</button>
+                        <div style="padding:6px 12px;font-size:12px;color:#666;border-bottom:1px solid #eee;">
+    插入表格
+</div>
+<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;">
+    <input type="number" id="tableRowsInput" value="2" min="1" max="50" style="width:50px;padding:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+    <span style="font-size:13px;color:#666;">行 ×</span>
+    <input type="number" id="tableColsInput" value="2" min="1" max="50" style="width:50px;padding:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+    <span style="font-size:13px;color:#666;">列</span>
+</div>
+<button onclick="insertTableCustom();closeTableMenu()" style="display:block;width:100%;text-align:left;padding:6px 12px;border:none;background:transparent;cursor:pointer;font-size:13px;color:#1976d2;font-weight:bold;border-radius:4px;">
+    ✓ 插入
+</button>
+<div class="divider"></div>
                         <div class="divider"></div>
                         <button onclick="tableInsertRow();closeTableMenu()">下方插入行</button>
                         <button onclick="tableInsertRowAbove();closeTableMenu()">上方插入行</button>
@@ -1151,7 +1191,6 @@ var state = {
 };
 var lastDetectedLang = '';
 
-/* 语言搜索下拉（目标语言）—— 支持输入过滤 + 只重翻当前语言 */
 function initSearchableSelects() {
     document.querySelectorAll('.searchable-select').forEach(wrap => {
         const input = wrap.querySelector('input[type="text"]');
@@ -1784,11 +1823,17 @@ function doClearQR() {
     document.getElementById('qrcodeDisplay').innerHTML = '<div class="placeholder">输入链接或文本后自动生成二维码</div>';
     document.getElementById('qrcodeDownload').disabled = true;
     if (currentQrBlobUrl) { URL.revokeObjectURL(currentQrBlobUrl); currentQrBlobUrl = null; }
+    // × 按钮隐藏
+    const clearBtn = document.getElementById('qrcodeInputClear');
+    if (clearBtn) clearBtn.style.display = 'none';
 }
 
 document.getElementById('qrcodeGenerate').addEventListener('click', doGenerateQR);
 
-document.getElementById('qrcodeClear').addEventListener('click', doClearQR);
+document.getElementById('qrcodeClear').addEventListener('click', () => {
+    clearTimeout(qrDebounceTimer);
+    doClearQR();
+});
 
 document.getElementById('qrcodeDownload').addEventListener('click', () => {
     if (!currentQrBlobUrl) return;
@@ -1800,9 +1845,14 @@ document.getElementById('qrcodeDownload').addEventListener('click', () => {
     document.body.removeChild(a);
 });
 
+// 输入框：500ms 防抖自动生成；清空立即清除
+const qrInputClearBtn = document.getElementById('qrcodeInputClear');
 let qrDebounceTimer = null;
+
 document.getElementById('qrcodeText').addEventListener('input', () => {
     const val = document.getElementById('qrcodeText').value.trim();
+
+    qrInputClearBtn.style.display = val ? 'flex' : 'none';
 
     if (!val) {
         clearTimeout(qrDebounceTimer);
@@ -1813,7 +1863,22 @@ document.getElementById('qrcodeText').addEventListener('input', () => {
     clearTimeout(qrDebounceTimer);
     qrDebounceTimer = setTimeout(() => {
         doGenerateQR();
-    }, 500);
+    }, 300);
+});
+
+// Esc 键清空
+document.getElementById('qrcodeText').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        clearTimeout(qrDebounceTimer);
+        doClearQR();
+    }
+});
+
+// 点 × 清空
+qrInputClearBtn.addEventListener('click', () => {
+    clearTimeout(qrDebounceTimer);
+    doClearQR();
+    document.getElementById('qrcodeText').focus();
 });
 
 /* ============================================================
@@ -1904,7 +1969,22 @@ function insertTable(rows, cols) {
     document.execCommand('insertHTML', false, html);
     updateNoteStatus();
 }
+function insertTableCustom() {
+    const rowsInput = document.getElementById('tableRowsInput');
+    const colsInput = document.getElementById('tableColsInput');
+    let rows = parseInt(rowsInput.value, 10);
+    let cols = parseInt(colsInput.value, 10);
 
+    if (!Number.isFinite(rows) || rows < 1) rows = 1;
+    if (!Number.isFinite(cols) || cols < 1) cols = 1;
+    if (rows > 50) rows = 50;
+    if (cols > 50) cols = 50;
+
+    rowsInput.value = rows;
+    colsInput.value = cols;
+
+    insertTable(rows, cols);
+}
 function insertLink() {
     const url = prompt("输入链接");
     if (url) { document.execCommand("createLink", false, url); updateNoteStatus(); }
