@@ -799,7 +799,7 @@ textarea {
             <div class="lang-select-wrap">
                 <label>目标语言1:</label>
                 <div class="searchable-select" data-target="targetLang1">
-                    <input type="text" placeholder="输入搜索..." readonly>
+                    <input type="text" placeholder="输入搜索...">
                     <div class="dropdown"></div>
                     <input type="hidden" id="targetLang1" value="zh-CN">
                 </div>
@@ -807,7 +807,7 @@ textarea {
             <div class="lang-select-wrap">
                 <label>目标语言2:</label>
                 <div class="searchable-select" data-target="targetLang2">
-                    <input type="text" placeholder="输入搜索..." readonly>
+                    <input type="text" placeholder="输入搜索...">
                     <div class="dropdown"></div>
                     <input type="hidden" id="targetLang2" value="en">
                 </div>
@@ -815,7 +815,7 @@ textarea {
             <div class="lang-select-wrap">
                 <label>目标语言3:</label>
                 <div class="searchable-select" data-target="targetLang3">
-                    <input type="text" placeholder="输入搜索..." readonly>
+                    <input type="text" placeholder="输入搜索...">
                     <div class="dropdown"></div>
                     <input type="hidden" id="targetLang3" value="de">
                 </div>
@@ -1150,11 +1150,14 @@ var state = {
 };
 var lastDetectedLang = '';
 
+/* 语言搜索下拉（目标语言）—— 支持输入过滤 + 只重翻当前语言 */
 function initSearchableSelects() {
     document.querySelectorAll('.searchable-select').forEach(wrap => {
         const input = wrap.querySelector('input[type="text"]');
         const hidden = wrap.querySelector('input[type="hidden"]');
         const dropdown = wrap.querySelector('.dropdown');
+        const targetId = wrap.dataset.target;
+        const idx = parseInt(targetId.replace('targetLang', ''), 10) - 1;
 
         const setDisplay = (code) => {
             input.value = languages[code] || code;
@@ -1163,7 +1166,7 @@ function initSearchableSelects() {
         setDisplay(hidden.value);
 
         const renderDropdown = (filter = '') => {
-            const f = filter.toLowerCase();
+            const f = filter.toLowerCase().trim();
             const filtered = sortedLangs.filter(([code, name]) =>
                 name.toLowerCase().includes(f) || code.toLowerCase().includes(f)
             );
@@ -1177,17 +1180,22 @@ function initSearchableSelects() {
         };
 
         const openDropdown = () => {
-            renderDropdown(input.value === languages[hidden.value] ? '' : input.value);
+            const cur = input.value;
+            const isLangName = Object.values(languages).includes(cur);
+            renderDropdown(isLangName ? '' : cur);
             dropdown.classList.add('open');
             input.select();
         };
+
         const closeDropdown = () => {
             dropdown.classList.remove('open');
             input.value = languages[hidden.value] || hidden.value;
         };
 
         input.addEventListener('focus', openDropdown);
-        input.addEventListener('click', openDropdown);
+        input.addEventListener('click', () => {
+            if (!dropdown.classList.contains('open')) openDropdown();
+        });
         input.addEventListener('input', () => {
             if (!dropdown.classList.contains('open')) dropdown.classList.add('open');
             renderDropdown(input.value);
@@ -1195,17 +1203,18 @@ function initSearchableSelects() {
         input.addEventListener('keydown', (e) => {
             const items = dropdown.querySelectorAll('.dropdown-item');
             const active = dropdown.querySelector('.dropdown-item.active');
-            let idx = Array.from(items).indexOf(active);
+            let cur = Array.from(items).indexOf(active);
+
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                idx = idx < items.length - 1 ? idx + 1 : 0;
+                cur = cur < items.length - 1 ? cur + 1 : 0;
                 items.forEach(i => i.classList.remove('active'));
-                if (items[idx]) { items[idx].classList.add('active'); items[idx].scrollIntoView({ block: 'nearest' }); }
+                if (items[cur]) { items[cur].classList.add('active'); items[cur].scrollIntoView({ block: 'nearest' }); }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                idx = idx > 0 ? idx - 1 : items.length - 1;
+                cur = cur > 0 ? cur - 1 : items.length - 1;
                 items.forEach(i => i.classList.remove('active'));
-                if (items[idx]) { items[idx].classList.add('active'); items[idx].scrollIntoView({ block: 'nearest' }); }
+                if (items[cur]) { items[cur].classList.add('active'); items[cur].scrollIntoView({ block: 'nearest' }); }
             } else if (e.key === 'Enter') {
                 e.preventDefault();
                 if (active) active.click();
@@ -1215,14 +1224,33 @@ function initSearchableSelects() {
                 input.blur();
             }
         });
+
         dropdown.addEventListener('click', (e) => {
             const item = e.target.closest('.dropdown-item');
             if (!item) return;
-            hidden.value = item.dataset.code;
-            input.value = languages[item.dataset.code] || item.dataset.code;
+            const code = item.dataset.code;
+            const changed = (hidden.value !== code);
+            hidden.value = code;
+            input.value = languages[code] || code;
             dropdown.classList.remove('open');
-            translateText();
+
+            if (!changed) return;
+
+            const text = document.getElementById('inputText').value.trim();
+            if (!text) return;
+
+            if (state.retryTimers[idx]) {
+                clearTimeout(state.retryTimers[idx]);
+                delete state.retryTimers[idx];
+            }
+
+            const resultEl = document.getElementById(['result1', 'result2', 'result3'][idx]);
+            resultEl.innerText = '翻译中...';
+            setViaBadge(idx, null);
+
+            doTranslateOne(idx, text, code);
         });
+
         document.addEventListener('click', (e) => {
             if (!wrap.contains(e.target)) closeDropdown();
         });
@@ -1837,7 +1865,6 @@ function insertCodeBlock() {
     updateNoteStatus();
 }
 
-/* 插入指定行列数的表格 */
 function insertTable(rows, cols) {
     if (typeof rows !== 'number') rows = 2;
     if (typeof cols !== 'number') cols = 2;
@@ -2441,7 +2468,6 @@ function doFind() {
     const lowerFind = find.toLowerCase();
     const nodes = getAllTextNodes();
 
-    // 第一遍：收集所有匹配位置，数出总数
     const matches = [];
     for (let i = 0; i < nodes.length; i++) {
         const text = nodes[i].nodeValue;
@@ -2463,7 +2489,6 @@ function doFind() {
         return;
     }
 
-    // 第二遍：定位到下一个（循环）
     let nextIndex = lastFindIndex + 1;
     if (nextIndex >= totalMatches) nextIndex = 0;
 
@@ -2505,7 +2530,6 @@ function doReplaceOne() {
     range.deleteContents();
     range.insertNode(document.createTextNode(replace));
 
-    // 替换后回退一位，让下次 doFind 从当前位置重新数
     lastFindIndex = lastFindIndex - 1;
     setTimeout(() => doFind(), 50);
 
