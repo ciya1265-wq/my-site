@@ -1969,6 +1969,22 @@ function insertTable(rows, cols) {
     document.execCommand('insertHTML', false, html);
     updateNoteStatus();
 }
+    function insertTableCustom() {
+    const rowsInput = document.getElementById('tableRowsInput');
+    const colsInput = document.getElementById('tableColsInput');
+    let rows = parseInt(rowsInput.value, 10);
+    let cols = parseInt(colsInput.value, 10);
+
+    if (!Number.isFinite(rows) || rows < 1) rows = 1;
+    if (!Number.isFinite(cols) || cols < 1) cols = 1;
+    if (rows > 50) rows = 50;
+    if (cols > 50) cols = 50;
+
+    rowsInput.value = rows;
+    colsInput.value = cols;
+
+    insertTable(rows, cols);
+}
 function insertTableCustom() {
     const rowsInput = document.getElementById('tableRowsInput');
     const colsInput = document.getElementById('tableColsInput');
@@ -2126,7 +2142,14 @@ function toggleTableMenu(e) {
 function closeTableMenu() {
     document.getElementById('tableMenu').style.display = 'none';
 }
-document.addEventListener('click', function () {
+// 阻止菜单内部点击冒泡到 document（点输入框不会被立即关闭）
+document.getElementById('tableMenu').addEventListener('click', function (e) {
+    e.stopPropagation();
+});
+
+document.addEventListener('click', function (e) {
+    const menu = document.getElementById('tableMenu');
+    if (menu && menu.contains(e.target)) return;
     closeTableMenu();
 });
 
