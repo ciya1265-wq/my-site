@@ -1757,15 +1757,18 @@ function renderCommonRates(rates) {
 let currentQrBlobUrl = null;
 let currentQrFilename = 'qrcode.png';
 
-document.getElementById('qrcodeGenerate').addEventListener('click', () => {
+function doGenerateQR() {
     const text = document.getElementById('qrcodeText').value.trim();
     const display = document.getElementById('qrcodeDisplay');
     const downloadBtn = document.getElementById('qrcodeDownload');
+
     if (!text) {
-        display.innerHTML = '<div class="placeholder">请输入链接或文本</div>';
+        display.innerHTML = '<div class="placeholder">输入链接或文本后自动生成二维码</div>';
         downloadBtn.disabled = true;
+        if (currentQrBlobUrl) { URL.revokeObjectURL(currentQrBlobUrl); currentQrBlobUrl = null; }
         return;
     }
+
     const url = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(text)}`;
     display.innerHTML = `<img src="${url}" alt="二维码" crossorigin="anonymous">`;
     fetch(url).then(res => res.blob()).then(blob => {
@@ -1774,7 +1777,18 @@ document.getElementById('qrcodeGenerate').addEventListener('click', () => {
         currentQrFilename = 'qrcode_' + Date.now() + '.png';
         downloadBtn.disabled = false;
     }).catch(() => { downloadBtn.disabled = true; });
-});
+}
+
+function doClearQR() {
+    document.getElementById('qrcodeText').value = '';
+    document.getElementById('qrcodeDisplay').innerHTML = '<div class="placeholder">输入链接或文本后自动生成二维码</div>';
+    document.getElementById('qrcodeDownload').disabled = true;
+    if (currentQrBlobUrl) { URL.revokeObjectURL(currentQrBlobUrl); currentQrBlobUrl = null; }
+}
+
+document.getElementById('qrcodeGenerate').addEventListener('click', doGenerateQR);
+
+document.getElementById('qrcodeClear').addEventListener('click', doClearQR);
 
 document.getElementById('qrcodeDownload').addEventListener('click', () => {
     if (!currentQrBlobUrl) return;
@@ -1786,11 +1800,20 @@ document.getElementById('qrcodeDownload').addEventListener('click', () => {
     document.body.removeChild(a);
 });
 
-document.getElementById('qrcodeClear').addEventListener('click', () => {
-    document.getElementById('qrcodeText').value = '';
-    document.getElementById('qrcodeDisplay').innerHTML = '<div class="placeholder">输入链接或文本后自动生成二维码</div>';
-    document.getElementById('qrcodeDownload').disabled = true;
-    if (currentQrBlobUrl) { URL.revokeObjectURL(currentQrBlobUrl); currentQrBlobUrl = null; }
+let qrDebounceTimer = null;
+document.getElementById('qrcodeText').addEventListener('input', () => {
+    const val = document.getElementById('qrcodeText').value.trim();
+
+    if (!val) {
+        clearTimeout(qrDebounceTimer);
+        doClearQR();
+        return;
+    }
+
+    clearTimeout(qrDebounceTimer);
+    qrDebounceTimer = setTimeout(() => {
+        doGenerateQR();
+    }, 500);
 });
 
 /* ============================================================
