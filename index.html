@@ -199,7 +199,7 @@ body {
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 500;
-    min-width: 160px;
+    min-width: 180px;
     padding: 4px;
     margin-top: 4px;
 }
@@ -468,18 +468,9 @@ textarea {
     font-size: 14px;
 }
 .translation-header button:hover { background: #45a049; }
-    .translation-header button.translating {
-    background: #fbc02d !important;
-    cursor: wait;
-}
-.translation-header button.translated {
-    background: #2e7d32 !important;
-    cursor: default;
-}
-.translation-header button.copied {
-    background: #2e7d32 !important;
-    cursor: default;
-}
+.translation-header button.translating { background: #fbc02d !important; cursor: wait; }
+.translation-header button.translated { background: #2e7d32 !important; cursor: default; }
+.translation-header button.copied { background: #2e7d32 !important; cursor: default; }
 .via-badge {
     display: none;
     font-size: 11px;
@@ -1024,18 +1015,17 @@ textarea {
                     <button onclick="toggleTableMenu(event)" title="表格操作">⊞ 表格 ▾</button>
                     <div id="tableMenu">
                         <div style="padding:6px 12px;font-size:12px;color:#666;border-bottom:1px solid #eee;">
-    插入表格
-</div>
-<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;">
-    <input type="number" id="tableRowsInput" value="2" min="1" max="50" style="width:50px;padding:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
-    <span style="font-size:13px;color:#666;">行 ×</span>
-    <input type="number" id="tableColsInput" value="2" min="1" max="50" style="width:50px;padding:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
-    <span style="font-size:13px;color:#666;">列</span>
-</div>
-<button onclick="insertTableCustom();closeTableMenu()" style="display:block;width:100%;text-align:left;padding:6px 12px;border:none;background:transparent;cursor:pointer;font-size:13px;color:#1976d2;font-weight:bold;border-radius:4px;">
-    ✓ 插入
-</button>
-<div class="divider"></div>
+                            插入表格
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;">
+                            <input type="number" id="tableRowsInput" value="2" min="1" max="50" style="width:50px;padding:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                            <span style="font-size:13px;color:#666;">行 ×</span>
+                            <input type="number" id="tableColsInput" value="2" min="1" max="50" style="width:50px;padding:4px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                            <span style="font-size:13px;color:#666;">列</span>
+                        </div>
+                        <button onclick="insertTableCustom();closeTableMenu()" style="display:block;width:100%;text-align:left;padding:6px 12px;border:none;background:transparent;cursor:pointer;font-size:13px;color:#1976d2;font-weight:bold;border-radius:4px;">
+                            ✓ 插入
+                        </button>
                         <div class="divider"></div>
                         <button onclick="tableInsertRow();closeTableMenu()">下方插入行</button>
                         <button onclick="tableInsertRowAbove();closeTableMenu()">上方插入行</button>
@@ -1133,7 +1123,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 /* ============================================================
-   翻译模块（全自动多通道降级）
+   翻译模块
 ============================================================ */
 const languages = {
     "af":"南非荷兰语","sq":"阿尔巴尼亚语","am":"阿姆哈拉语","ar":"阿拉伯语",
@@ -1489,13 +1479,13 @@ function debounce(fn,delay){let timer=null; return function(...args){clearTimeou
 var RETRY_INTERVAL = 30000;
 var MAX_RETRIES = 30;
 
-function doTranslateOne(idx, text, lang, attempt, onSuccess) {
+function doTranslateOne(idx, text, lang, attempt, onDone) {
     if (typeof attempt !== 'number') attempt = 0;
     var resultEl = document.getElementById(['result1','result2','result3'][idx]);
     if (attempt >= MAX_RETRIES) {
         resultEl.innerText = '多次尝试后所有翻译通道仍不可用，请稍后重新输入';
         setViaBadge(idx, null);
-        if (typeof onSuccess === 'function') onSuccess();
+        if (typeof onDone === 'function') onDone();
         return;
     }
     if (!state.controller || state.controller.signal.aborted) {
@@ -1509,7 +1499,7 @@ function doTranslateOne(idx, text, lang, attempt, onSuccess) {
         }
         resultEl.innerText = result.translated || '';
         setViaBadge(idx, result.via);
-        if (typeof onSuccess === 'function') onSuccess();
+        if (typeof onDone === 'function') onDone();
     }).catch(function (e) {
         if (e.name === 'AbortError') return;
         var errText;
@@ -1520,9 +1510,10 @@ function doTranslateOne(idx, text, lang, attempt, onSuccess) {
         else errText = '所有翻译通道暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
         resultEl.innerText = errText;
         setViaBadge(idx, null);
+        // 注意：失败重试时不调 onDone，让按钮保持"翻译中"状态；最终放弃时上面已调
         state.retryTimers[idx] = setTimeout(function () {
             if (state.controller && state.controller.signal.aborted) return;
-            doTranslateOne(idx, text, lang, attempt + 1, onSuccess);
+            doTranslateOne(idx, text, lang, attempt + 1, onDone);
         }, RETRY_INTERVAL);
     });
 }
@@ -1552,23 +1543,43 @@ document.getElementById('clearInput').addEventListener('click',()=>{
     translateText();
 });
 
+/* 翻译按钮：点一下 → 翻译中 → ✓ → 恢复 */
 document.querySelectorAll('.translate-btn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-        const idx=parseInt(btn.dataset.index);
-        const text=document.getElementById('inputText').value.trim();
-        if(!text) return;
-        const lang=document.getElementById(['targetLang1','targetLang2','targetLang3'][idx]).value;
+    btn.addEventListener('click', ()=>{
+        const idx = parseInt(btn.dataset.index);
+        const text = document.getElementById('inputText').value.trim();
+        if (!text) return;
+
+        const lang = document.getElementById(['targetLang1','targetLang2','targetLang3'][idx]).value;
         if (state.controller) state.controller.abort();
         state.controller = new AbortController();
-        doTranslateOne(idx, text, lang);
+
+        const original = '翻译';
+        btn.textContent = '翻译中…';
+        btn.disabled = true;
+        btn.classList.add('translating');
+        btn.classList.remove('translated', 'copied');
+
+        const done = () => {
+            btn.textContent = '✓';
+            btn.classList.remove('translating');
+            btn.classList.add('translated');
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.classList.remove('translated');
+                btn.disabled = false;
+            }, 1500);
+        };
+
+        doTranslateOne(idx, text, lang, 0, done);
     });
 });
 
+/* 复制按钮：点一下 → ✓ → 恢复 */
 document.querySelectorAll('.copy-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
         const idx = parseInt(btn.dataset.index);
         const text = document.getElementById(['result1','result2','result3'][idx]).innerText;
-
         if (!text) return;
 
         try {
@@ -1587,7 +1598,6 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
         btn.textContent = '✓';
         btn.classList.add('copied');
         btn.disabled = true;
-
         setTimeout(() => {
             btn.textContent = '复制';
             btn.classList.remove('copied');
@@ -1861,7 +1871,6 @@ function doClearQR() {
     document.getElementById('qrcodeDisplay').innerHTML = '<div class="placeholder">输入链接或文本后自动生成二维码</div>';
     document.getElementById('qrcodeDownload').disabled = true;
     if (currentQrBlobUrl) { URL.revokeObjectURL(currentQrBlobUrl); currentQrBlobUrl = null; }
-    // × 按钮隐藏
     const clearBtn = document.getElementById('qrcodeInputClear');
     if (clearBtn) clearBtn.style.display = 'none';
 }
@@ -1883,13 +1892,11 @@ document.getElementById('qrcodeDownload').addEventListener('click', () => {
     document.body.removeChild(a);
 });
 
-// 输入框：500ms 防抖自动生成；清空立即清除
 const qrInputClearBtn = document.getElementById('qrcodeInputClear');
 let qrDebounceTimer = null;
 
 document.getElementById('qrcodeText').addEventListener('input', () => {
     const val = document.getElementById('qrcodeText').value.trim();
-
     qrInputClearBtn.style.display = val ? 'flex' : 'none';
 
     if (!val) {
@@ -1904,7 +1911,6 @@ document.getElementById('qrcodeText').addEventListener('input', () => {
     }, 300);
 });
 
-// Esc 键清空
 document.getElementById('qrcodeText').addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         clearTimeout(qrDebounceTimer);
@@ -1912,7 +1918,6 @@ document.getElementById('qrcodeText').addEventListener('keydown', (e) => {
     }
 });
 
-// 点 × 清空
 qrInputClearBtn.addEventListener('click', () => {
     clearTimeout(qrDebounceTimer);
     doClearQR();
@@ -2007,22 +2012,7 @@ function insertTable(rows, cols) {
     document.execCommand('insertHTML', false, html);
     updateNoteStatus();
 }
-    function insertTableCustom() {
-    const rowsInput = document.getElementById('tableRowsInput');
-    const colsInput = document.getElementById('tableColsInput');
-    let rows = parseInt(rowsInput.value, 10);
-    let cols = parseInt(colsInput.value, 10);
 
-    if (!Number.isFinite(rows) || rows < 1) rows = 1;
-    if (!Number.isFinite(cols) || cols < 1) cols = 1;
-    if (rows > 50) rows = 50;
-    if (cols > 50) cols = 50;
-
-    rowsInput.value = rows;
-    colsInput.value = cols;
-
-    insertTable(rows, cols);
-}
 function insertTableCustom() {
     const rowsInput = document.getElementById('tableRowsInput');
     const colsInput = document.getElementById('tableColsInput');
@@ -2039,6 +2029,7 @@ function insertTableCustom() {
 
     insertTable(rows, cols);
 }
+
 function insertLink() {
     const url = prompt("输入链接");
     if (url) { document.execCommand("createLink", false, url); updateNoteStatus(); }
@@ -2180,7 +2171,7 @@ function toggleTableMenu(e) {
 function closeTableMenu() {
     document.getElementById('tableMenu').style.display = 'none';
 }
-// 阻止菜单内部点击冒泡到 document（点输入框不会被立即关闭）
+
 document.getElementById('tableMenu').addEventListener('click', function (e) {
     e.stopPropagation();
 });
