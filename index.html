@@ -468,6 +468,7 @@ textarea {
     font-size: 14px;
 }
 .translation-header button:hover { background: #45a049; }
+    .translation-header button.copied { background: #2e7d32 !important; cursor: default; }
 .via-badge {
     display: none;
     font-size: 11px;
@@ -1551,10 +1552,34 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
 });
 
 document.querySelectorAll('.copy-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-        const idx=parseInt(btn.dataset.index);
-        const text=document.getElementById(['result1','result2','result3'][idx]).innerText;
-        navigator.clipboard.writeText(text);
+    btn.addEventListener('click', async ()=>{
+        const idx = parseInt(btn.dataset.index);
+        const text = document.getElementById(['result1','result2','result3'][idx]).innerText;
+
+        if (!text) return;
+
+        try {
+            await navigator.clipboard.writeText(text);
+        } catch (e) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (ignore) {}
+            document.body.removeChild(ta);
+        }
+
+        btn.textContent = '✓';
+        btn.classList.add('copied');
+        btn.disabled = true;
+
+        setTimeout(() => {
+            btn.textContent = '复制';
+            btn.classList.remove('copied');
+            btn.disabled = false;
+        }, 1500);
     });
 });
 
