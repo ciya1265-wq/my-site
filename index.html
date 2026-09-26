@@ -468,7 +468,18 @@ textarea {
     font-size: 14px;
 }
 .translation-header button:hover { background: #45a049; }
-    .translation-header button.copied { background: #2e7d32 !important; cursor: default; }
+    .translation-header button.translating {
+    background: #fbc02d !important;
+    cursor: wait;
+}
+.translation-header button.translated {
+    background: #2e7d32 !important;
+    cursor: default;
+}
+.translation-header button.copied {
+    background: #2e7d32 !important;
+    cursor: default;
+}
 .via-badge {
     display: none;
     font-size: 11px;
@@ -1478,12 +1489,13 @@ function debounce(fn,delay){let timer=null; return function(...args){clearTimeou
 var RETRY_INTERVAL = 30000;
 var MAX_RETRIES = 30;
 
-function doTranslateOne(idx, text, lang, attempt) {
+function doTranslateOne(idx, text, lang, attempt, onSuccess) {
     if (typeof attempt !== 'number') attempt = 0;
     var resultEl = document.getElementById(['result1','result2','result3'][idx]);
     if (attempt >= MAX_RETRIES) {
         resultEl.innerText = '多次尝试后所有翻译通道仍不可用，请稍后重新输入';
         setViaBadge(idx, null);
+        if (typeof onSuccess === 'function') onSuccess();
         return;
     }
     if (!state.controller || state.controller.signal.aborted) {
@@ -1497,6 +1509,7 @@ function doTranslateOne(idx, text, lang, attempt) {
         }
         resultEl.innerText = result.translated || '';
         setViaBadge(idx, result.via);
+        if (typeof onSuccess === 'function') onSuccess();
     }).catch(function (e) {
         if (e.name === 'AbortError') return;
         var errText;
@@ -1509,7 +1522,7 @@ function doTranslateOne(idx, text, lang, attempt) {
         setViaBadge(idx, null);
         state.retryTimers[idx] = setTimeout(function () {
             if (state.controller && state.controller.signal.aborted) return;
-            doTranslateOne(idx, text, lang, attempt + 1);
+            doTranslateOne(idx, text, lang, attempt + 1, onSuccess);
         }, RETRY_INTERVAL);
     });
 }
