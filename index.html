@@ -1049,7 +1049,7 @@ textarea {
                 <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
                 <button onclick="toggleWrap()" id="wrapToggleBtn" title="切换表格自动换行">🔁 自动换行</button>
                 <button onclick="toggleVerticalAlign()" id="valignBtn" title="切换表格单元格垂直对齐">⬆ 顶部对齐</button>
-                <button onclick="openCellFilter()" title="按当前单元格筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
+                <button onclick="openCellFilter()" title="表格筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
             </div>
         </div>
         <div id="noteEditor" contenteditable="true"></div>
@@ -1081,14 +1081,21 @@ textarea {
     </div>
 </div>
 
-<!-- 单元格筛选弹窗 -->
+<!-- 表格筛选弹窗 -->
 <div id="cellFilterModal">
     <div class="cell-filter-box">
-        <h4>按单元格筛选</h4>
-        <div class="cell-filter-row">
-            <label>当前列（自动识别）</label>
-            <div class="readonly-value" id="filterColName">—</div>
+        <h4>表格筛选</h4>
+
+        <div class="cell-filter-row" id="tablePickRow" style="display:none;">
+            <label>选择表格</label>
+            <select id="filterTableSelect"></select>
         </div>
+
+        <div class="cell-filter-row" id="columnPickRow">
+            <label>选择列</label>
+            <select id="filterColumnSelect"></select>
+        </div>
+
         <div class="cell-filter-row">
             <label>筛选值（手动输入）</label>
             <input type="text" id="filterInputValue" placeholder="输入要筛选的值...">
@@ -1101,6 +1108,7 @@ textarea {
                 <option value="notContains">排除该值（隐藏匹配行）</option>
             </select>
         </div>
+
         <div class="cell-filter-actions">
             <button class="btn-secondary" onclick="closeCellFilter()">取消</button>
             <button class="btn-danger" onclick="clearCellFilter()">清除筛选</button>
@@ -1510,7 +1518,6 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
         else errText = '所有翻译通道暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
         resultEl.innerText = errText;
         setViaBadge(idx, null);
-        // 注意：失败重试时不调 onDone，让按钮保持"翻译中"状态；最终放弃时上面已调
         state.retryTimers[idx] = setTimeout(function () {
             if (state.controller && state.controller.signal.aborted) return;
             doTranslateOne(idx, text, lang, attempt + 1, onDone);
@@ -1543,7 +1550,7 @@ document.getElementById('clearInput').addEventListener('click',()=>{
     translateText();
 });
 
-/* 翻译按钮：点一下 → 翻译中 → ✓ → 恢复 */
+/* 翻译按钮 */
 document.querySelectorAll('.translate-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -1575,7 +1582,7 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
     });
 });
 
-/* 复制按钮：点一下 → ✓ → 恢复 */
+/* 复制按钮 */
 document.querySelectorAll('.copy-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -2259,44 +2266,77 @@ function applyVAlignSetting() {
     `;
 }
 
-/* ===== 按单元格筛选 ===== */
+/* ===== 表格筛选（无光标依赖） ===== */
 let filterTarget = null;
 
-function getCurrentCell() {
-    const sel = window.getSelection();
-    if (!sel.rangeCount) return null;
-    let node = sel.anchorNode;
-    while (node && node !== noteEditor) {
-        if (node.nodeType === 1 && (node.tagName === 'TD' || node.tagName === 'TH')) {
-            return node;
+/* 收集当前笔记里所有表格的元信息 */
+function collectAllTables() {
+    const tables = Array.from(noteEditor.querySelectorAll('table'));
+    return tables.map((table, idx) => {
+        const firstRow = table.querySelector('tr');
+        const colNames = [];
+        if (firstRow) {
+            Array.from(firstRow.children).forEach(cell => {
+                const name = cell.innerText.trim();
+                colNames.push(name || `第${colNames.length + 1}列`);
+            });
         }
-        node = node.parentNode;
-    }
-    return null;
+        const rowCount = table.querySelectorAll('tr').length;
+        return { table, idx, colNames, rowCount };
+    });
 }
 
 function openCellFilter() {
-    const cell = getCurrentCell();
-    if (!cell) {
-        alert('请先把光标放在表格的某个单元格里，再点击「筛选」');
+    const tables = collectAllTables();
+
+    if (tables.length === 0) {
+        alert('当前笔记里没有表格');
         return;
     }
-    const row = cell.parentElement;
-    const colIndex = Array.from(row.children).indexOf(cell);
-    const table = cell.closest('table');
-    const firstRow = table.querySelector('tr');
-    const headerCell = firstRow.children[colIndex];
-    const colName = headerCell ? headerCell.innerText.trim() : `第${colIndex + 1}列`;
 
-    filterTarget = { table, colIndex, colName };
+    filterTarget = { tables, tableIndex: 0, colIndex: 0 };
 
-    document.getElementById('filterColName').textContent = colName;
+    const tablePickRow = document.getElementById('tablePickRow');
+    const tableSelect = document.getElementById('filterTableSelect');
+
+    if (tables.length > 1) {
+        tablePickRow.style.display = 'block';
+        tableSelect.innerHTML = tables.map((t, i) =>
+            `<option value="${i}">表格 ${i + 1}（${t.rowCount} 行 × ${t.colNames.length} 列）</option>`
+        ).join('');
+        tableSelect.value = '0';
+    } else {
+        tablePickRow.style.display = 'none';
+    }
+
+    refreshColumnSelect(0);
+
     document.getElementById('filterInputValue').value = '';
     document.getElementById('filterMode').value = 'contains';
 
     document.getElementById('cellFilterModal').classList.add('open');
     setTimeout(() => document.getElementById('filterInputValue').focus(), 50);
 }
+
+function refreshColumnSelect(tableIdx) {
+    const t = filterTarget.tables[tableIdx];
+    const colSelect = document.getElementById('filterColumnSelect');
+    colSelect.innerHTML = t.colNames.map((name, i) =>
+        `<option value="${i}">${escapeHtml(name)}</option>`
+    ).join('');
+    colSelect.value = '0';
+    filterTarget.tableIndex = tableIdx;
+    filterTarget.colIndex = 0;
+}
+
+document.addEventListener('change', (e) => {
+    if (e.target.id === 'filterTableSelect') {
+        refreshColumnSelect(parseInt(e.target.value, 10));
+    }
+    if (e.target.id === 'filterColumnSelect') {
+        filterTarget.colIndex = parseInt(e.target.value, 10);
+    }
+});
 
 function closeCellFilter() {
     document.getElementById('cellFilterModal').classList.remove('open');
@@ -2399,8 +2439,16 @@ function applyCellFilter() {
     if (!filterTarget) return;
     const value = document.getElementById('filterInputValue').value.trim().toLowerCase();
     if (!value) { alert('请输入筛选值'); return; }
+
     const mode = document.getElementById('filterMode').value;
-    const { table, colIndex, colName } = filterTarget;
+    const tableIdx = parseInt(document.getElementById('filterTableSelect').value || '0', 10);
+    const colIdx = parseInt(document.getElementById('filterColumnSelect').value || '0', 10);
+
+    const t = filterTarget.tables[tableIdx];
+    if (!t) { alert('表格不存在'); return; }
+
+    const { table, colNames } = t;
+    const colName = colNames[colIdx] || `第${colIdx + 1}列`;
 
     const { grid } = parseTableGrid(table);
     if (grid.length < 2) { alert('表格没有数据行'); return; }
@@ -2409,7 +2457,7 @@ function applyCellFilter() {
     const dataRows = grid.slice(1);
 
     const matchedRows = dataRows.filter(row => {
-        const cellText = (row[colIndex] || '').toLowerCase();
+        const cellText = (row[colIdx] || '').toLowerCase();
         let match = false;
         if (mode === 'equals') match = (cellText === value);
         else if (mode === 'contains') match = cellText.includes(value);
@@ -2422,15 +2470,29 @@ function applyCellFilter() {
     const newGrid = [headerRow, ...matchedRows];
     const newTableHtml = renderGrid(newGrid, 0);
 
-    let html = `<div class="filtered-result" contenteditable="false">`;
-    html += `<div class="filtered-banner">🔽 筛选：${colName} ${getModeLabel(mode)} "${value}"（共 ${matchedRows.length} 行）
+    // 清掉上一次筛选结果
+    const oldResults = noteEditor.querySelectorAll('.filtered-result');
+    oldResults.forEach(el => {
+        const prev = el.previousElementSibling;
+        if (prev && prev.tagName === 'TABLE') prev.style.display = '';
+        el.remove();
+    });
+    // 恢复所有被隐藏的表
+    noteEditor.querySelectorAll('table[data-filter-tag]').forEach(t2 => {
+        t2.style.display = '';
+        delete t2.dataset.filterTag;
+    });
+
+    const tag = 'filtered-' + tableIdx + '-' + Date.now();
+    table.dataset.filterTag = tag;
+
+    let html = `<div class="filtered-result" data-tag="${tag}" contenteditable="false">`;
+    html += `<div class="filtered-banner">🔽 筛选：${escapeHtml(colName)} ${getModeLabel(mode)} "${escapeHtml(value)}"（共 ${matchedRows.length} 行）
         <button onclick="clearCellFilter()">✕ 清除筛选</button>
     </div>`;
     html += `<table>${newTableHtml}</table></div>`;
 
     table.style.display = 'none';
-    const existing = document.querySelector('.filtered-result');
-    if (existing) existing.remove();
     table.insertAdjacentHTML('afterend', html);
 
     closeCellFilter();
@@ -2446,10 +2508,12 @@ function getModeLabel(mode) {
 }
 
 function clearCellFilter() {
-    if (!filterTarget) { closeCellFilter(); return; }
-    filterTarget.table.style.display = '';
-    const existing = document.querySelector('.filtered-result');
-    if (existing) existing.remove();
+    noteEditor.querySelectorAll('table[data-filter-tag]').forEach(t => {
+        t.style.display = '';
+        delete t.dataset.filterTag;
+    });
+    noteEditor.querySelectorAll('.filtered-result').forEach(el => el.remove());
+    filterTarget = null;
     closeCellFilter();
     noteStatusRight.textContent = '✕ 筛选已清除';
     noteStatusRight.style.color = '#4caf50';
