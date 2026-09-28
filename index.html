@@ -1485,7 +1485,7 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
         resultEl.innerText = result.translated || '';
         setViaBadge(idx, result.via);
         if (typeof onDone === 'function') onDone();
-      }).catch(function (e) {
+    }).catch(function (e) {
         if (e.name === 'AbortError') return;
         var errText;
         if (e && e.unsupported) errText = '该语言暂不受备用通道支持，正在自动重试…';
@@ -1495,18 +1495,12 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
         else errText = '所有翻译通道暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
         resultEl.innerText = errText;
         setViaBadge(idx, null);
-
-        // 第一次失败时就让按钮恢复，用户可再点；后台继续重试
-        if (typeof onDone === 'function') {
-            onDone();
-            onDone = null;  // 防止后续重试再次触发
-        }
-
         state.retryTimers[idx] = setTimeout(function () {
             if (state.controller && state.controller.signal.aborted) return;
             doTranslateOne(idx, text, lang, attempt + 1, onDone);
         }, RETRY_INTERVAL);
     });
+}
 
 const translateText = debounce(async ()=>{
     const text = document.getElementById('inputText').value.trim();
