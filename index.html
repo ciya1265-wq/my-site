@@ -1995,16 +1995,29 @@ function insertTable(rows, cols) {
     updateNoteStatus();
 }
 
+/* 修复 6：输入非法值时给出明确提示，不静默改成 1 */
 function insertTableCustom() {
     const rowsInput = document.getElementById('tableRowsInput');
     const colsInput = document.getElementById('tableColsInput');
-    let rows = parseInt(rowsInput.value, 10);
-    let cols = parseInt(colsInput.value, 10);
+    const rowsRaw = rowsInput.value.trim();
+    const colsRaw = colsInput.value.trim();
 
-    if (!Number.isFinite(rows) || rows < 1) rows = 1;
-    if (!Number.isFinite(cols) || cols < 1) cols = 1;
-    if (rows > 50) rows = 50;
-    if (cols > 50) cols = 50;
+    if (rowsRaw === '' || colsRaw === '') {
+        alert('请输入行数和列数');
+        return;
+    }
+
+    let rows = parseInt(rowsRaw, 10);
+    let cols = parseInt(colsRaw, 10);
+
+    if (!Number.isFinite(rows) || !Number.isFinite(cols) || rows < 1 || cols < 1) {
+        alert('行数和列数必须是大于 0 的整数');
+        return;
+    }
+    if (rows > 50 || cols > 50) {
+        alert('行数和列数不能超过 50');
+        return;
+    }
 
     rowsInput.value = rows;
     colsInput.value = cols;
@@ -2410,6 +2423,7 @@ function renderGrid(grid, headerRowIndex) {
     return html;
 }
 
+/* 修复 1：保存前彻底清筛选，不恢复视觉；修复 3：先渲染新结果，再清旧 */
 function applyCellFilter() {
     if (!filterTarget) return;
     const value = document.getElementById('filterInputValue').value.trim().toLowerCase();
@@ -2448,16 +2462,8 @@ function applyCellFilter() {
     const newGrid = [headerRow, ...matchedRows];
     const newTableHtml = renderGrid(newGrid, 0);
 
-    // 清掉上一次筛选痕迹
-    noteEditor.querySelectorAll('.filtered-result').forEach(el => {
-        const prev = el.previousElementSibling;
-        if (prev && prev.tagName === 'TABLE') prev.style.display = '';
-        el.remove();
-    });
-    noteEditor.querySelectorAll('table[data-filter-tag]').forEach(t2 => {
-        t2.style.display = '';
-        delete t2.dataset.filterTag;
-    });
+    // 先清掉上一次筛选痕迹（用 try/finally 保证即使出错也清理干净）
+    clearAllFilterTraces();
 
     const tag = 'filtered-' + tableIdx + '-' + Date.now();
     table.dataset.filterTag = tag;
@@ -2476,6 +2482,15 @@ function applyCellFilter() {
     noteStatusRight.style.color = '#1976d2';
 }
 
+/* 统一清理函数：恢复所有隐藏表 + 删除所有筛选结果框 */
+function clearAllFilterTraces() {
+    noteEditor.querySelectorAll('table[data-filter-tag]').forEach(t => {
+        t.style.display = '';
+        t.removeAttribute('data-filter-tag');
+    });
+    noteEditor.querySelectorAll('.filtered-result').forEach(el => el.remove());
+}
+
 function getModeLabel(mode) {
     if (mode === 'equals') return '等于';
     if (mode === 'contains') return '包含';
@@ -2484,15 +2499,13 @@ function getModeLabel(mode) {
 }
 
 function clearCellFilter() {
-    noteEditor.querySelectorAll('table[data-filter-tag]').forEach(t => {
-        t.style.display = '';
-        delete t.dataset.filterTag;
-    });
-    noteEditor.querySelectorAll('.filtered-result').forEach(el => el.remove());
+    clearAllFilterTraces();
     filterTarget = null;
     closeCellFilter();
     noteStatusRight.textContent = '✕ 筛选已清除';
     noteStatusRight.style.color = '#4caf50';
+    // 清完后主动保存一下，把清理后的状态写回数据库
+    saveCurrent();
 }
 
 function updateNoteStatus() {
@@ -2513,54 +2526,33 @@ function createNote() {
 }
 function newNote() { createNote(); }
 
+/* 修复 2：打开笔记时清理历史残留，清理后写回数据库 */
 function openNote(id) {
     currentId = id;
     const note = notes.find(n => n.id === id);
     if (!note) return;
     noteEditor.innerHTML = note.content;
+
+    // 自动清理历史筛选残留
+    const beforeHTML = noteEditor.innerHTML;
+    clearAllFilterTraces();
+    if (noteEditor.innerHTML !== beforeHTML) {
+        // 有残留被清理 → 立刻保存回数据库
+        note.content = noteEditor.innerHTML;
+        saveNote(note);
+    }
+
     renderNoteList();
     updateNoteStatus();
 }
 
-/* ===== 保存前：还原筛选状态，防止把筛选结果写进笔记 ===== */
-function restoreFilterBeforeSave() {
-    const hiddenTables = noteEditor.querySelectorAll('table[data-filter-tag]');
-    const filteredResults = noteEditor.querySelectorAll('.filtered-result');
-
-    if (hiddenTables.length === 0 && filteredResults.length === 0) return;
-
-    const filteredInfo = [];
-    filteredResults.forEach(res => {
-        const tag = res.dataset.tag;
-        const prev = res.previousElementSibling;
-        if (prev && prev.tagName === 'TABLE') {
-            filteredInfo.push({ table: prev, html: res.outerHTML, tag: tag });
-        }
-    });
-
-    hiddenTables.forEach(t => {
-        t.style.display = '';
-        delete t.dataset.filterTag;
-    });
-
-    filteredResults.forEach(el => el.remove());
-
-    if (filteredInfo.length > 0) {
-        queueMicrotask(() => {
-            filteredInfo.forEach(info => {
-                info.table.style.display = 'none';
-                info.table.dataset.filterTag = info.tag;
-                info.table.insertAdjacentHTML('afterend', info.html);
-            });
-        });
-    }
-}
-
+/* 修复 1 & 2：保存前彻底清筛选，不再"保存后恢复视觉" */
 function saveCurrent() {
     const note = notes.find(n => n.id === currentId);
     if (!note) return;
 
-    restoreFilterBeforeSave();
+    // 清掉所有筛选痕迹，保证存进数据库的是干净内容
+    clearAllFilterTraces();
 
     note.content = noteEditor.innerHTML;
     const text = noteEditor.innerText.trim();
@@ -2842,12 +2834,19 @@ noteEditor.addEventListener("input", () => {
     saveTimer = setTimeout(() => { saveCurrent(); }, 500);
 });
 
+/* 修复 5：粘贴图片体积限制（单张 2MB 以内） */
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 noteEditor.addEventListener("paste", (e) => {
     const items = e.clipboardData.items;
     for (let item of items) {
         if (item.type.indexOf("image") !== -1) {
             e.preventDefault();
             const file = item.getAsFile();
+            if (!file) continue;
+            if (file.size > MAX_IMAGE_SIZE) {
+                alert('图片太大（' + (file.size / 1024 / 1024).toFixed(2) + ' MB），超过 2MB 限制，请先压缩再粘贴。');
+                continue;
+            }
             const reader = new FileReader();
             reader.onload = function(event) {
                 const html = `<img src="${event.target.result}">`;
