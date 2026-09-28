@@ -757,15 +757,6 @@ textarea {
 .cell-filter-box h4 { margin: 0 0 14px 0; font-size: 16px; }
 .cell-filter-row { margin-bottom: 12px; }
 .cell-filter-row label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: bold; }
-.cell-filter-row .readonly-value {
-    padding: 8px 12px;
-    background: #f0f7ff;
-    border: 1px solid #d0e3ff;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #1976d2;
-    font-weight: bold;
-}
 .cell-filter-row input[type="text"] {
     width: 100%;
     padding: 8px 10px;
@@ -1077,7 +1068,9 @@ textarea {
 
         <div class="cell-filter-row" id="columnPickRow">
             <label>选择列</label>
-            <select id="filterColumnSelect"></select>
+            <select id="filterColumnSelect">
+                <option value="">请选择列...</option>
+            </select>
         </div>
 
         <div class="cell-filter-row">
@@ -2249,7 +2242,9 @@ function applyVAlignSetting() {
 let filterTarget = null;
 
 function collectAllTables() {
-    const tables = Array.from(noteEditor.querySelectorAll('table'));
+    // 只收集原表，排除筛选结果框里的 table
+    const allTables = Array.from(noteEditor.querySelectorAll('table'));
+    const tables = allTables.filter(t => !t.closest('.filtered-result'));
     return tables.map((table, idx) => {
         const firstRow = table.querySelector('tr');
         const colNames = [];
@@ -2272,16 +2267,17 @@ function openCellFilter() {
         return;
     }
 
-    filterTarget = { tables, tableIndex: 0, colIndex: 0 };
+    filterTarget = { tables, tableIndex: 0, colIndex: -1 };
 
     const tablePickRow = document.getElementById('tablePickRow');
     const tableSelect = document.getElementById('filterTableSelect');
 
     if (tables.length > 1) {
         tablePickRow.style.display = 'block';
-        tableSelect.innerHTML = tables.map((t, i) =>
-            `<option value="${i}">表格 ${i + 1}（${t.rowCount} 行 × ${t.colNames.length} 列）</option>`
-        ).join('');
+        tableSelect.innerHTML = tables.map((t, i) => {
+            const firstCol = t.colNames[0] || '无表头';
+            return `<option value="${i}">表格 ${i + 1}（${t.rowCount} 行 × ${t.colNames.length} 列）首列：${escapeHtml(firstCol)}</option>`;
+        }).join('');
         tableSelect.value = '0';
     } else {
         tablePickRow.style.display = 'none';
@@ -2299,12 +2295,13 @@ function openCellFilter() {
 function refreshColumnSelect(tableIdx) {
     const t = filterTarget.tables[tableIdx];
     const colSelect = document.getElementById('filterColumnSelect');
-    colSelect.innerHTML = t.colNames.map((name, i) =>
-        `<option value="${i}">${escapeHtml(name)}</option>`
-    ).join('');
-    colSelect.value = '0';
+    colSelect.innerHTML = '<option value="">请选择列...</option>' +
+        t.colNames.map((name, i) =>
+            `<option value="${i}">${escapeHtml(name)}</option>`
+        ).join('');
+    colSelect.value = '';
     filterTarget.tableIndex = tableIdx;
-    filterTarget.colIndex = 0;
+    filterTarget.colIndex = -1;
 }
 
 document.addEventListener('change', (e) => {
@@ -2312,7 +2309,7 @@ document.addEventListener('change', (e) => {
         refreshColumnSelect(parseInt(e.target.value, 10));
     }
     if (e.target.id === 'filterColumnSelect') {
-        filterTarget.colIndex = parseInt(e.target.value, 10);
+        filterTarget.colIndex = e.target.value === '' ? -1 : parseInt(e.target.value, 10);
     }
 });
 
@@ -2420,7 +2417,10 @@ function applyCellFilter() {
 
     const mode = document.getElementById('filterMode').value;
     const tableIdx = parseInt(document.getElementById('filterTableSelect').value || '0', 10);
-    const colIdx = parseInt(document.getElementById('filterColumnSelect').value || '0', 10);
+    const colValue = document.getElementById('filterColumnSelect').value;
+
+    if (colValue === '') { alert('请先选择列'); return; }
+    const colIdx = parseInt(colValue, 10);
 
     const t = filterTarget.tables[tableIdx];
     if (!t) { alert('表格不存在'); return; }
@@ -2448,7 +2448,7 @@ function applyCellFilter() {
     const newGrid = [headerRow, ...matchedRows];
     const newTableHtml = renderGrid(newGrid, 0);
 
-    // 清理上一次的筛选痕迹
+    // 清掉上一次筛选痕迹
     noteEditor.querySelectorAll('.filtered-result').forEach(el => {
         const prev = el.previousElementSibling;
         if (prev && prev.tagName === 'TABLE') prev.style.display = '';
@@ -2545,7 +2545,6 @@ function restoreFilterBeforeSave() {
 
     filteredResults.forEach(el => el.remove());
 
-    // 保存后立刻恢复视觉（微任务）
     if (filteredInfo.length > 0) {
         queueMicrotask(() => {
             filteredInfo.forEach(info => {
@@ -2561,7 +2560,6 @@ function saveCurrent() {
     const note = notes.find(n => n.id === currentId);
     if (!note) return;
 
-    // 保存前先还原筛选状态，避免把筛选结果写进笔记
     restoreFilterBeforeSave();
 
     note.content = noteEditor.innerHTML;
