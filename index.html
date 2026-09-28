@@ -14,7 +14,6 @@ body {
     color: #333;
 }
 
-/* ===== 顶部标签栏 ===== */
 #tabBar {
     display: flex;
     flex-wrap: wrap;
@@ -61,9 +60,6 @@ body {
     box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
-/* ============================================================
-   笔记面板
-============================================================ */
 #tab-note.active {
     display: flex;
     height: calc(100vh - 58px);
@@ -342,9 +338,6 @@ body {
     color: #1976d2;
 }
 
-/* ============================================================
-   翻译面板
-============================================================ */
 #apiBar {
     display: flex;
     align-items: center;
@@ -493,9 +486,6 @@ textarea {
     background: #fff;
 }
 
-/* ============================================================
-   货币换算
-============================================================ */
 .currency-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .currency-card {
     flex: 1;
@@ -628,9 +618,6 @@ textarea {
 .rate-card .value { font-size: 16px; font-weight: bold; color: #222; }
 .rate-card .reverse { font-size: 12px; color: #999; margin-top: 4px; }
 
-/* ============================================================
-   二维码
-============================================================ */
 .qr-input-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .qr-input-wrap {
     flex: 1;
@@ -713,9 +700,6 @@ textarea {
 .qr-footer .download-btn:disabled { background: #bbb; cursor: not-allowed; }
 .qr-footer .tip { font-size: 12px; color: #999; }
 
-/* ============================================================
-   弹窗
-============================================================ */
 #findReplaceModal {
     display: none;
     position: fixed;
@@ -1550,7 +1534,6 @@ document.getElementById('clearInput').addEventListener('click',()=>{
     translateText();
 });
 
-/* 翻译按钮 */
 document.querySelectorAll('.translate-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -1582,7 +1565,6 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
     });
 });
 
-/* 复制按钮 */
 document.querySelectorAll('.copy-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -2050,7 +2032,6 @@ function insertHr() {
     updateNoteStatus();
 }
 
-/* ===== 表格行列操作 ===== */
 function findCellInEditor() {
     const sel = window.getSelection();
     if (!sel.rangeCount) return null;
@@ -2189,7 +2170,6 @@ document.addEventListener('click', function (e) {
     closeTableMenu();
 });
 
-/* ===== 表格自动换行 ===== */
 let autoWrap = true;
 function toggleWrap() {
     autoWrap = !autoWrap;
@@ -2236,7 +2216,6 @@ function applyWrapSetting() {
     }
 }
 
-/* ===== 表格垂直对齐 ===== */
 let vAlign = 'top';
 function toggleVerticalAlign() {
     vAlign = (vAlign === 'top') ? 'middle' : 'top';
@@ -2266,10 +2245,9 @@ function applyVAlignSetting() {
     `;
 }
 
-/* ===== 表格筛选（无光标依赖） ===== */
+/* ===== 表格筛选 ===== */
 let filterTarget = null;
 
-/* 收集当前笔记里所有表格的元信息 */
 function collectAllTables() {
     const tables = Array.from(noteEditor.querySelectorAll('table'));
     return tables.map((table, idx) => {
@@ -2470,14 +2448,12 @@ function applyCellFilter() {
     const newGrid = [headerRow, ...matchedRows];
     const newTableHtml = renderGrid(newGrid, 0);
 
-    // 清掉上一次筛选结果
-    const oldResults = noteEditor.querySelectorAll('.filtered-result');
-    oldResults.forEach(el => {
+    // 清理上一次的筛选痕迹
+    noteEditor.querySelectorAll('.filtered-result').forEach(el => {
         const prev = el.previousElementSibling;
         if (prev && prev.tagName === 'TABLE') prev.style.display = '';
         el.remove();
     });
-    // 恢复所有被隐藏的表
     noteEditor.querySelectorAll('table[data-filter-tag]').forEach(t2 => {
         t2.style.display = '';
         delete t2.dataset.filterTag;
@@ -2546,9 +2522,48 @@ function openNote(id) {
     updateNoteStatus();
 }
 
+/* ===== 保存前：还原筛选状态，防止把筛选结果写进笔记 ===== */
+function restoreFilterBeforeSave() {
+    const hiddenTables = noteEditor.querySelectorAll('table[data-filter-tag]');
+    const filteredResults = noteEditor.querySelectorAll('.filtered-result');
+
+    if (hiddenTables.length === 0 && filteredResults.length === 0) return;
+
+    const filteredInfo = [];
+    filteredResults.forEach(res => {
+        const tag = res.dataset.tag;
+        const prev = res.previousElementSibling;
+        if (prev && prev.tagName === 'TABLE') {
+            filteredInfo.push({ table: prev, html: res.outerHTML, tag: tag });
+        }
+    });
+
+    hiddenTables.forEach(t => {
+        t.style.display = '';
+        delete t.dataset.filterTag;
+    });
+
+    filteredResults.forEach(el => el.remove());
+
+    // 保存后立刻恢复视觉（微任务）
+    if (filteredInfo.length > 0) {
+        queueMicrotask(() => {
+            filteredInfo.forEach(info => {
+                info.table.style.display = 'none';
+                info.table.dataset.filterTag = info.tag;
+                info.table.insertAdjacentHTML('afterend', info.html);
+            });
+        });
+    }
+}
+
 function saveCurrent() {
     const note = notes.find(n => n.id === currentId);
     if (!note) return;
+
+    // 保存前先还原筛选状态，避免把筛选结果写进笔记
+    restoreFilterBeforeSave();
+
     note.content = noteEditor.innerHTML;
     const text = noteEditor.innerText.trim();
     if (!note.customTitle && (note.title === "未命名笔记" || note.title === "空白笔记")) {
@@ -2646,7 +2661,6 @@ function exportPDF() {
     setTimeout(() => { printWindow.focus(); printWindow.print(); }, 500);
 }
 
-/* ===== 查找替换 ===== */
 let lastFindIndex = -1;
 
 function openFindReplace() {
