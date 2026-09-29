@@ -1763,41 +1763,25 @@ const translateText = debounce(async ()=>{
 
 document.getElementById('inputText').addEventListener('input',translateText);
 
-/* ===== 输入框高度记忆 + 字号联动 ===== */
-(function initTextareaAutoFont() {
+/* ===== 输入框高度记忆（字号固定 14px，由 CSS 控制） ===== */
+(function initTextareaHeightMemory() {
     const ta = document.getElementById('inputText');
     if (!ta) return;
 
     const KEY_H = 'translateInputHeight';
 
-    const BASE_H = 220;
-    const BASE_FONT = 14;
-    const MIN_FONT = 11;
-    const MAX_FONT = 22;
-
-    function calcFont(h) {
-        let f = BASE_FONT * (h / BASE_H);
-        if (f < MIN_FONT) f = MIN_FONT;
-        if (f > MAX_FONT) f = MAX_FONT;
-        return f;
-    }
-
-    function applyHeight(h) {
-        ta.style.height = h + 'px';
-        ta.style.fontSize = calcFont(h) + 'px';
-    }
-
+    // 页面加载时读取上次保存的高度
     const saved = localStorage.getItem(KEY_H);
     if (saved && !isNaN(parseInt(saved, 10))) {
-        applyHeight(parseInt(saved, 10));
+        ta.style.height = parseInt(saved, 10) + 'px';
     }
 
+    // 高度变化时保存（拖动调整大小时触发）
     let lastH = ta.offsetHeight;
     const onResize = () => {
         const h = ta.offsetHeight;
         if (h === lastH) return;
         lastH = h;
-        ta.style.fontSize = calcFont(h) + 'px';
         localStorage.setItem(KEY_H, String(h));
     };
 
@@ -1808,8 +1792,6 @@ document.getElementById('inputText').addEventListener('input',translateText);
         ta.addEventListener('mouseup', onResize);
         window.addEventListener('mouseup', onResize);
     }
-
-    ta.style.fontSize = calcFont(ta.offsetHeight) + 'px';
 })();
 
 document.getElementById('clearInput').addEventListener('click',()=>{
