@@ -376,9 +376,10 @@ body {
 }
 .input-wrap textarea {
     flex: 1;
-    height: 150px;
-    padding: 12px 40px 12px 12px;
-    font-size: 16px;
+    height: 220px;
+    padding: 10px 44px 10px 12px;
+    font-size: 14px;
+    line-height: 1.6;
     border-radius: 8px;
     border: 1px solid #ccc;
     resize: vertical;
@@ -387,7 +388,7 @@ body {
 }
 #clearInput {
     position: absolute;
-    right: 10px;
+    right: 18px;
     top: 10px;
     width: 24px;
     height: 24px;
@@ -401,6 +402,7 @@ body {
     align-items: center;
     justify-content: center;
     transition: background 0.15s, color 0.15s;
+    z-index: 2;
 }
 #clearInput:hover {
     background: #b0b0b0;
@@ -531,6 +533,7 @@ body {
 .icon-btn.copied:hover {
     background: #c8e6c9;
 }
+
 .via-badge {
     display: none;
     font-size: 11px;
@@ -550,6 +553,8 @@ body {
     cursor: text;
     word-break: break-word;
     background: #fff;
+    font-size: 14px;
+    line-height: 1.6;
 }
 .result-card.translating {
     opacity: 0.5;
@@ -569,7 +574,9 @@ body {
     padding: 6px 16px;
     border-radius: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
 }
+
 .currency-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .currency-card {
     flex: 1;
@@ -881,16 +888,16 @@ body {
             <span id="apiStatus" class="status-badge status-testing">检测中...</span>
         </div>
         <div id="inputContainer">
-    <div class="input-wrap">
-        <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
-        <button id="clearInput" style="display:none;" title="清除">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-        </button>
-    </div>
-</div>
+            <div class="input-wrap">
+                <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
+                <button id="clearInput" style="display:none;" title="清除">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
         <div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
         <div id="controls">
             <div class="lang-select-wrap">
@@ -1331,7 +1338,8 @@ function applyCardState(idx) {
     const st = cardStates[idx];
     const els = getCardEls(idx);
     if (!els.translateBtn) return;
-        // 只有 translating 状态才保留结果框的"翻译中"样式，其他状态清掉
+
+    // 非 translating 状态时清掉结果框的"翻译中"样式
     if (els.resultEl && st !== 'translating') {
         els.resultEl.classList.remove('translating');
     }
@@ -1626,7 +1634,7 @@ function setViaBadge(idx, via) {
     }
 }
 
-/* 并发检测 API 状态（2 秒内出结果） */
+/* 并发检测 API 状态 */
 function testApi() {
     setApiStatus('testing');
 
@@ -1754,6 +1762,56 @@ const translateText = debounce(async ()=>{
 },500);
 
 document.getElementById('inputText').addEventListener('input',translateText);
+
+/* ===== 输入框高度记忆 + 字号联动 ===== */
+(function initTextareaAutoFont() {
+    const ta = document.getElementById('inputText');
+    if (!ta) return;
+
+    const KEY_H = 'translateInputHeight';
+
+    const BASE_H = 220;
+    const BASE_FONT = 14;
+    const MIN_FONT = 11;
+    const MAX_FONT = 22;
+
+    function calcFont(h) {
+        let f = BASE_FONT * (h / BASE_H);
+        if (f < MIN_FONT) f = MIN_FONT;
+        if (f > MAX_FONT) f = MAX_FONT;
+        return f;
+    }
+
+    function applyHeight(h) {
+        ta.style.height = h + 'px';
+        ta.style.fontSize = calcFont(h) + 'px';
+    }
+
+    const saved = localStorage.getItem(KEY_H);
+    if (saved && !isNaN(parseInt(saved, 10))) {
+        applyHeight(parseInt(saved, 10));
+    }
+
+    let lastH = ta.offsetHeight;
+    const onResize = () => {
+        const h = ta.offsetHeight;
+        if (h === lastH) return;
+        lastH = h;
+        ta.style.fontSize = calcFont(h) + 'px';
+        localStorage.setItem(KEY_H, String(h));
+    };
+
+    if (window.ResizeObserver) {
+        const ro = new ResizeObserver(onResize);
+        ro.observe(ta);
+    } else {
+        ta.addEventListener('mouseup', onResize);
+        window.addEventListener('mouseup', onResize);
+    }
+
+    ta.style.fontSize = calcFont(ta.offsetHeight) + 'px';
+})();
+
 document.getElementById('clearInput').addEventListener('click',()=>{
     document.getElementById('inputText').value='';
     translateText();
@@ -1775,14 +1833,12 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
 
         cardStates[idx] = 'translating';
 
-        // 结果框变淡 + 显示"翻译中…"
         const els = getCardEls(idx);
         if (els.resultEl) els.resultEl.classList.add('translating');
 
         const done = () => {
             btn.classList.remove('spinning');
             btn.disabled = false;
-            // 移除结果框的翻译中样式
             if (els.resultEl) els.resultEl.classList.remove('translating');
         };
 
@@ -1810,20 +1866,17 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
             document.body.removeChild(ta);
         }
 
-                btn.classList.add('copied');
-        // 悬浮提示"已复制"
-        btn.title = '已复制';
+        btn.classList.add('copied');
         if (copyTimers.has(btn)) clearTimeout(copyTimers.get(btn));
         const t = setTimeout(() => {
             btn.classList.remove('copied');
-            btn.title = '复制';
             copyTimers.delete(btn);
         }, 1200);
         copyTimers.set(btn, t);
     });
 });
 
-/* 结果框被用户编辑：只在 success 状态下同步复制按钮 */
+/* 结果框内容被手动编辑：只在 success 状态才同步复制按钮显隐 */
 [0, 1, 2].forEach(idx => {
     const resultEl = document.getElementById(['result1', 'result2', 'result3'][idx]);
     if (!resultEl) return;
