@@ -369,31 +369,43 @@ body {
 .status-badge.status-testing { background: #fff3e0; color: #e65100; }
 .status-badge.status-testing::before { background: #ff9800; }
 
-#inputContainer { display: flex; gap: 10px; margin-bottom: 8px; align-items: stretch; }
-textarea {
+#inputContainer { margin-bottom: 8px; }
+.input-wrap {
+    position: relative;
+    display: flex;
+}
+.input-wrap textarea {
     flex: 1;
     height: 150px;
-    padding: 12px;
+    padding: 12px 40px 12px 12px;
     font-size: 16px;
     border-radius: 8px;
     border: 1px solid #ccc;
     resize: vertical;
+    box-sizing: border-box;
+    font-family: inherit;
 }
 #clearInput {
-    width: 40px;
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: none;
-    border-radius: 8px;
-    background: #4CAF50;
-    color: #fff;
+    border-radius: 50%;
+    background: #d0d0d0;
+    color: #666;
     cursor: pointer;
-    font-size: 18px;
-    line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background 0.15s, color 0.15s;
 }
-#clearInput:hover { background: #45a049; }
+#clearInput:hover {
+    background: #b0b0b0;
+    color: #333;
+}
 #detectedLang {
     font-size: 13px;
     color: #666;
@@ -869,14 +881,16 @@ textarea {
             <span id="apiStatus" class="status-badge status-testing">检测中...</span>
         </div>
         <div id="inputContainer">
-            <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
-            <button id="clearInput" style="display:none;" title="清除">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
-        </div>
+    <div class="input-wrap">
+        <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
+        <button id="clearInput" style="display:none;" title="清除">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+</div>
         <div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
         <div id="controls">
             <div class="lang-select-wrap">
