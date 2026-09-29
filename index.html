@@ -539,7 +539,25 @@ textarea {
     word-break: break-word;
     background: #fff;
 }
-
+.result-card.translating {
+    opacity: 0.5;
+    background: #fafafa;
+    position: relative;
+}
+.result-card.translating::after {
+    content: '翻译中…';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #1976d2;
+    font-size: 14px;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 6px 16px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
 .currency-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .currency-card {
     flex: 1;
@@ -1299,6 +1317,10 @@ function applyCardState(idx) {
     const st = cardStates[idx];
     const els = getCardEls(idx);
     if (!els.translateBtn) return;
+        // 只有 translating 状态才保留结果框的"翻译中"样式，其他状态清掉
+    if (els.resultEl && st !== 'translating') {
+        els.resultEl.classList.remove('translating');
+    }
 
     switch (st) {
         case 'idle':
@@ -1739,9 +1761,15 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
 
         cardStates[idx] = 'translating';
 
+        // 结果框变淡 + 显示"翻译中…"
+        const els = getCardEls(idx);
+        if (els.resultEl) els.resultEl.classList.add('translating');
+
         const done = () => {
             btn.classList.remove('spinning');
             btn.disabled = false;
+            // 移除结果框的翻译中样式
+            if (els.resultEl) els.resultEl.classList.remove('translating');
         };
 
         doTranslateOne(idx, text, lang, 0, done);
