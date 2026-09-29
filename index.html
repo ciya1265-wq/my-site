@@ -369,7 +369,7 @@ body {
 .status-badge.status-testing { background: #fff3e0; color: #e65100; }
 .status-badge.status-testing::before { background: #ff9800; }
 
-#inputContainer { display: flex; gap: 10px; margin-bottom: 8px; }
+#inputContainer { display: flex; gap: 10px; margin-bottom: 8px; align-items: stretch; }
 textarea {
     flex: 1;
     height: 150px;
@@ -379,15 +379,21 @@ textarea {
     border: 1px solid #ccc;
     resize: vertical;
 }
-.btn-primary-sm {
-    padding: 6px 12px;
+#clearInput {
+    width: 40px;
+    padding: 0;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #4CAF50;
     color: #fff;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+#clearInput:hover { background: #45a049; }
 #detectedLang {
     font-size: 13px;
     color: #666;
@@ -450,20 +456,58 @@ textarea {
     display: flex;
     flex-direction: column;
 }
-.translation-header { display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center; gap: 6px; }
-.translation-header button {
-    padding: 6px 12px;
+.translation-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+}
+.translation-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+/* 图标按钮：复制、重新翻译 */
+.icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
     border: none;
     border-radius: 6px;
-    background: #4CAF50;
-    color: #fff;
+    background: transparent;
+    color: #5f6368;
     cursor: pointer;
-    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
 }
-.translation-header button:hover { background: #45a049; }
-.translation-header button.translating { background: #fbc02d !important; cursor: wait; }
-.translation-header button.translated { background: #2e7d32 !important; cursor: default; }
-.translation-header button.copied { background: #2e7d32 !important; cursor: default; }
+.icon-btn:hover { background: #eceff1; color: #1976d2; }
+.icon-btn svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.icon-btn.spinning svg {
+    animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+.icon-btn.copied {
+    color: #2e7d32;
+}
+.icon-btn.copied:hover { background: #e8f5e9; color: #2e7d32; }
+
 .via-badge {
     display: none;
     font-size: 11px;
@@ -472,7 +516,6 @@ textarea {
     border: 1px solid #ffe7ba;
     border-radius: 999px;
     padding: 2px 8px;
-    margin-left: 6px;
 }
 .result-card {
     height: 280px;
@@ -798,7 +841,12 @@ textarea {
         </div>
         <div id="inputContainer">
             <textarea id="inputText" placeholder="在此输入或粘贴文本..."></textarea>
-            <button id="clearInput" class="btn-primary-sm">清除</button>
+            <button id="clearInput" style="display:none;" title="清除">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
         </div>
         <div id="detectedLang">检测到语言：<span class="lang-name">—</span></div>
         <div id="controls">
@@ -828,27 +876,69 @@ textarea {
             </div>
         </div>
         <div class="translation-grid" id="results">
-            <div class="translation-block">
+            <div class="translation-block" data-block="0">
                 <div class="translation-header">
-                    <button class="translate-btn" data-index="0">翻译</button>
-                    <span class="via-badge" data-index="0"></span>
-                    <button class="copy-btn" data-index="0">复制</button>
+                    <div class="header-left">
+                        <button class="translate-btn icon-btn" data-index="0" style="display:none;" title="重新翻译">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M20 11a8 8 0 0 0-14.4-4.8L4 8"></path>
+                                <path d="M4 4v4h4"></path>
+                                <path d="M4 13a8 8 0 0 0 14.4 4.8L20 16"></path>
+                                <path d="M20 20v-4h-4"></path>
+                            </svg>
+                        </button>
+                        <span class="via-badge" data-index="0"></span>
+                    </div>
+                    <button class="copy-btn icon-btn" data-index="0" style="display:none;" title="复制">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
                 </div>
                 <div id="result1" class="result-card" contenteditable="true"></div>
             </div>
-            <div class="translation-block">
+            <div class="translation-block" data-block="1">
                 <div class="translation-header">
-                    <button class="translate-btn" data-index="1">翻译</button>
-                    <span class="via-badge" data-index="1"></span>
-                    <button class="copy-btn" data-index="1">复制</button>
+                    <div class="header-left">
+                        <button class="translate-btn icon-btn" data-index="1" style="display:none;" title="重新翻译">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M20 11a8 8 0 0 0-14.4-4.8L4 8"></path>
+                                <path d="M4 4v4h4"></path>
+                                <path d="M4 13a8 8 0 0 0 14.4 4.8L20 16"></path>
+                                <path d="M20 20v-4h-4"></path>
+                            </svg>
+                        </button>
+                        <span class="via-badge" data-index="1"></span>
+                    </div>
+                    <button class="copy-btn icon-btn" data-index="1" style="display:none;" title="复制">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
                 </div>
                 <div id="result2" class="result-card" contenteditable="true"></div>
             </div>
-            <div class="translation-block">
+            <div class="translation-block" data-block="2">
                 <div class="translation-header">
-                    <button class="translate-btn" data-index="2">翻译</button>
-                    <span class="via-badge" data-index="2"></span>
-                    <button class="copy-btn" data-index="2">复制</button>
+                    <div class="header-left">
+                        <button class="translate-btn icon-btn" data-index="2" style="display:none;" title="重新翻译">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M20 11a8 8 0 0 0-14.4-4.8L4 8"></path>
+                                <path d="M4 4v4h4"></path>
+                                <path d="M4 13a8 8 0 0 0 14.4 4.8L20 16"></path>
+                                <path d="M20 20v-4h-4"></path>
+                            </svg>
+                        </button>
+                        <span class="via-badge" data-index="2"></span>
+                    </div>
+                    <button class="copy-btn icon-btn" data-index="2" style="display:none;" title="复制">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
                 </div>
                 <div id="result3" class="result-card" contenteditable="true"></div>
             </div>
@@ -1178,6 +1268,27 @@ var state = {
 };
 var lastDetectedLang = '';
 
+function getCardEls(idx) {
+    const block = document.querySelector('.translation-block[data-block="' + idx + '"]');
+    return {
+        block: block,
+        translateBtn: block ? block.querySelector('.translate-btn') : null,
+        copyBtn: block ? block.querySelector('.copy-btn') : null,
+        viaBadge: document.querySelector('.via-badge[data-index="' + idx + '"]'),
+        resultEl: document.getElementById(['result1', 'result2', 'result3'][idx])
+    };
+}
+
+function setCardButtonsVisible(idx, translateVisible, copyVisible) {
+    const els = getCardEls(idx);
+    if (els.translateBtn) els.translateBtn.style.display = translateVisible ? '' : 'none';
+    if (els.copyBtn) els.copyBtn.style.display = copyVisible ? '' : 'none';
+}
+
+function hideAllCardButtons() {
+    [0, 1, 2].forEach(i => setCardButtonsVisible(i, false, false));
+}
+
 function initSearchableSelects() {
     document.querySelectorAll('.searchable-select').forEach(wrap => {
         const input = wrap.querySelector('input[type="text"]');
@@ -1271,9 +1382,11 @@ function initSearchableSelects() {
                 delete state.retryTimers[idx];
             }
 
-            const resultEl = document.getElementById(['result1', 'result2', 'result3'][idx]);
-            resultEl.innerText = '翻译中...';
+            const els = getCardEls(idx);
+            els.resultEl.innerText = '翻译中...';
             setViaBadge(idx, null);
+
+            setCardButtonsVisible(idx, false, false);
 
             doTranslateOne(idx, text, code);
         });
@@ -1466,7 +1579,9 @@ var MAX_RETRIES = 30;
 
 function doTranslateOne(idx, text, lang, attempt, onDone) {
     if (typeof attempt !== 'number') attempt = 0;
-    var resultEl = document.getElementById(['result1','result2','result3'][idx]);
+    var els = getCardEls(idx);
+    var resultEl = els.resultEl;
+
     if (attempt >= MAX_RETRIES) {
         resultEl.innerText = '多次尝试后所有翻译通道仍不可用，请稍后重新输入';
         setViaBadge(idx, null);
@@ -1484,6 +1599,9 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
         }
         resultEl.innerText = result.translated || '';
         setViaBadge(idx, result.via);
+
+        setCardButtonsVisible(idx, true, true);
+
         if (typeof onDone === 'function') onDone();
     }).catch(function (e) {
         if (e.name === 'AbortError') return;
@@ -1495,6 +1613,15 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
         else errText = '所有翻译通道暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
         resultEl.innerText = errText;
         setViaBadge(idx, null);
+
+        setCardButtonsVisible(idx, false, false);
+
+        // 第一次失败时立刻让按钮恢复，不卡「翻译中…」
+        if (typeof onDone === 'function') {
+            onDone();
+            onDone = null;
+        }
+
         state.retryTimers[idx] = setTimeout(function () {
             if (state.controller && state.controller.signal.aborted) return;
             doTranslateOne(idx, text, lang, attempt + 1, onDone);
@@ -1509,12 +1636,26 @@ const translateText = debounce(async ()=>{
     state.retryTimers = {};
     state.controller = new AbortController();
 
+    document.getElementById('clearInput').style.display = text ? '' : 'none';
+
+    if (!text) {
+        ['result1','result2','result3'].forEach((id,i)=>{
+            document.getElementById(id).innerText = '';
+            setViaBadge(i, null);
+        });
+        hideAllCardButtons();
+        setDetectedLang('');
+        lastDetectedLang = '';
+        state.detected = null;
+        return;
+    }
+
     ['result1','result2','result3'].forEach((id,i)=>{
-        document.getElementById(id).innerText = text ? '翻译中...' : '';
+        document.getElementById(id).innerText = '翻译中...';
         setViaBadge(i, null);
     });
+    hideAllCardButtons();
 
-    if(!text) { setDetectedLang(''); lastDetectedLang = ''; state.detected = null; return; }
     state.detected = null;
 
     const langs=['targetLang1','targetLang2','targetLang3'].map(id=>document.getElementById(id).value);
@@ -1527,6 +1668,7 @@ document.getElementById('clearInput').addEventListener('click',()=>{
     translateText();
 });
 
+/* 手动点「重新翻译」图标 */
 document.querySelectorAll('.translate-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -1537,27 +1679,22 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
         if (state.controller) state.controller.abort();
         state.controller = new AbortController();
 
-        const original = '翻译';
-        btn.textContent = '翻译中…';
+        // 图标开始旋转
+        btn.classList.add('spinning');
         btn.disabled = true;
-        btn.classList.add('translating');
-        btn.classList.remove('translated', 'copied');
+
+        setCardButtonsVisible(idx, true, false);
 
         const done = () => {
-            btn.textContent = '✓';
-            btn.classList.remove('translating');
-            btn.classList.add('translated');
-            setTimeout(() => {
-                btn.textContent = original;
-                btn.classList.remove('translated');
-                btn.disabled = false;
-            }, 1500);
+            btn.classList.remove('spinning');
+            btn.disabled = false;
         };
 
         doTranslateOne(idx, text, lang, 0, done);
     });
 });
 
+/* 复制图标：点击后变绿一下 */
 document.querySelectorAll('.copy-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -1577,14 +1714,19 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
             document.body.removeChild(ta);
         }
 
-        btn.textContent = '✓';
         btn.classList.add('copied');
-        btn.disabled = true;
-        setTimeout(() => {
-            btn.textContent = '复制';
-            btn.classList.remove('copied');
-            btn.disabled = false;
-        }, 1500);
+        setTimeout(() => btn.classList.remove('copied'), 1200);
+    });
+});
+
+/* 结果框被用户清空时，自动隐藏该卡的复制按钮 */
+[0, 1, 2].forEach(idx => {
+    const resultEl = document.getElementById(['result1', 'result2', 'result3'][idx]);
+    if (!resultEl) return;
+    resultEl.addEventListener('input', () => {
+        const txt = resultEl.innerText.trim();
+        const els = getCardEls(idx);
+        if (els.copyBtn) els.copyBtn.style.display = txt ? '' : 'none';
     });
 });
 
@@ -1995,7 +2137,6 @@ function insertTable(rows, cols) {
     updateNoteStatus();
 }
 
-/* 修复 6：输入非法值时给出明确提示，不静默改成 1 */
 function insertTableCustom() {
     const rowsInput = document.getElementById('tableRowsInput');
     const colsInput = document.getElementById('tableColsInput');
@@ -2255,7 +2396,6 @@ function applyVAlignSetting() {
 let filterTarget = null;
 
 function collectAllTables() {
-    // 只收集原表，排除筛选结果框里的 table
     const allTables = Array.from(noteEditor.querySelectorAll('table'));
     const tables = allTables.filter(t => !t.closest('.filtered-result'));
     return tables.map((table, idx) => {
@@ -2423,7 +2563,6 @@ function renderGrid(grid, headerRowIndex) {
     return html;
 }
 
-/* 修复 1：保存前彻底清筛选，不恢复视觉；修复 3：先渲染新结果，再清旧 */
 function applyCellFilter() {
     if (!filterTarget) return;
     const value = document.getElementById('filterInputValue').value.trim().toLowerCase();
@@ -2462,7 +2601,6 @@ function applyCellFilter() {
     const newGrid = [headerRow, ...matchedRows];
     const newTableHtml = renderGrid(newGrid, 0);
 
-    // 先清掉上一次筛选痕迹（用 try/finally 保证即使出错也清理干净）
     clearAllFilterTraces();
 
     const tag = 'filtered-' + tableIdx + '-' + Date.now();
@@ -2482,7 +2620,6 @@ function applyCellFilter() {
     noteStatusRight.style.color = '#1976d2';
 }
 
-/* 统一清理函数：恢复所有隐藏表 + 删除所有筛选结果框 */
 function clearAllFilterTraces() {
     noteEditor.querySelectorAll('table[data-filter-tag]').forEach(t => {
         t.style.display = '';
@@ -2504,8 +2641,6 @@ function clearCellFilter() {
     closeCellFilter();
     noteStatusRight.textContent = '✕ 筛选已清除';
     noteStatusRight.style.color = '#4caf50';
-    // 清完后主动保存一下，把清理后的状态写回数据库
-    saveCurrent();
 }
 
 function updateNoteStatus() {
@@ -2526,18 +2661,15 @@ function createNote() {
 }
 function newNote() { createNote(); }
 
-/* 修复 2：打开笔记时清理历史残留，清理后写回数据库 */
 function openNote(id) {
     currentId = id;
     const note = notes.find(n => n.id === id);
     if (!note) return;
     noteEditor.innerHTML = note.content;
 
-    // 自动清理历史筛选残留
     const beforeHTML = noteEditor.innerHTML;
     clearAllFilterTraces();
     if (noteEditor.innerHTML !== beforeHTML) {
-        // 有残留被清理 → 立刻保存回数据库
         note.content = noteEditor.innerHTML;
         saveNote(note);
     }
@@ -2546,12 +2678,10 @@ function openNote(id) {
     updateNoteStatus();
 }
 
-/* 修复 1 & 2：保存前彻底清筛选，不再"保存后恢复视觉" */
 function saveCurrent() {
     const note = notes.find(n => n.id === currentId);
     if (!note) return;
 
-    // 清掉所有筛选痕迹，保证存进数据库的是干净内容
     clearAllFilterTraces();
 
     note.content = noteEditor.innerHTML;
@@ -2834,8 +2964,7 @@ noteEditor.addEventListener("input", () => {
     saveTimer = setTimeout(() => { saveCurrent(); }, 500);
 });
 
-/* 修复 5：粘贴图片体积限制（单张 2MB 以内） */
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 noteEditor.addEventListener("paste", (e) => {
     const items = e.clipboardData.items;
     for (let item of items) {
