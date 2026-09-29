@@ -470,7 +470,6 @@ textarea {
     gap: 6px;
     flex: 1;
 }
-/* 图标按钮：复制、重新翻译 */
 .icon-btn {
     width: 32px;
     height: 32px;
@@ -1183,7 +1182,6 @@ textarea {
         </div>
     </div>
 </div>
-
 <script>
 /* ============================================================
    标签切换
@@ -1268,6 +1266,12 @@ var state = {
 };
 var lastDetectedLang = '';
 
+/* ============================================================
+   卡片状态机
+   ============================================================ */
+const cardStates = { 0: 'idle', 1: 'idle', 2: 'idle' };
+const copyTimers = new WeakMap();
+
 function getCardEls(idx) {
     const block = document.querySelector('.translation-block[data-block="' + idx + '"]');
     return {
@@ -1279,16 +1283,54 @@ function getCardEls(idx) {
     };
 }
 
-function setCardButtonsVisible(idx, translateVisible, copyVisible) {
+function applyCardState(idx) {
+    const st = cardStates[idx];
     const els = getCardEls(idx);
-    if (els.translateBtn) els.translateBtn.style.display = translateVisible ? '' : 'none';
-    if (els.copyBtn) els.copyBtn.style.display = copyVisible ? '' : 'none';
+    if (!els.translateBtn) return;
+
+    switch (st) {
+        case 'idle':
+        case 'translating':
+            els.translateBtn.style.display = 'none';
+            els.translateBtn.disabled = false;
+            els.translateBtn.classList.remove('spinning');
+            break;
+        case 'success':
+        case 'error':
+            els.translateBtn.style.display = '';
+            els.translateBtn.disabled = false;
+            els.translateBtn.classList.remove('spinning');
+            break;
+    }
+
+    if (els.copyBtn) {
+        switch (st) {
+            case 'idle':
+            case 'translating':
+            case 'error':
+                els.copyBtn.style.display = 'none';
+                break;
+            case 'success':
+                const hasText = (els.resultEl.innerText || '').trim().length > 0;
+                els.copyBtn.style.display = hasText ? '' : 'none';
+                break;
+        }
+    }
 }
 
-function hideAllCardButtons() {
-    [0, 1, 2].forEach(i => setCardButtonsVisible(i, false, false));
+function setCardState(idx, newState) {
+    cardStates[idx] = newState;
+    applyCardState(idx);
 }
 
+function resetAllCards() {
+    cardStates[0] = cardStates[1] = cardStates[2] = 'idle';
+    [0,1,2].forEach(applyCardState);
+}
+
+/* ============================================================
+   语言下拉
+   ============================================================ */
 function initSearchableSelects() {
     document.querySelectorAll('.searchable-select').forEach(wrap => {
         const input = wrap.querySelector('input[type="text"]');
@@ -1386,7 +1428,7 @@ function initSearchableSelects() {
             els.resultEl.innerText = '翻译中...';
             setViaBadge(idx, null);
 
-            setCardButtonsVisible(idx, false, false);
+            setCardState(idx, 'translating');
 
             doTranslateOne(idx, text, code);
         });
@@ -1536,40 +1578,43 @@ function setViaBadge(idx, via) {
     }
 }
 
-async function testApi() {
+/* 并发检测 API 状态（2 秒内出结果） */
+function testApi() {
     setApiStatus('testing');
-    for (var i = 0; i < GOOGLE_CHANNELS.length; i++) {
-        try {
-            var url = buildGoogleUrl('hello', 'zh-CN', GOOGLE_CHANNELS[i]);
-            var controller = new AbortController();
-            var timeout = setTimeout(function () { controller.abort(); }, 5000);
-            var res = await fetch(url, { signal: controller.signal });
-            clearTimeout(timeout);
-            if (res.ok) {
-                var data = await res.json();
-                var result = (data[0] || []).map(function (item) { return item[0]; }).join('');
-                if (result && result.length > 0) {
-                    setApiStatus('ok');
-                    return true;
-                }
-            }
-        } catch (e) {}
-    }
-    try {
-        var controller2 = new AbortController();
-        var timeout2 = setTimeout(function () { controller2.abort(); }, 5000);
-        var res2 = await fetch('https://api.mymemory.translated.net/get?q=hello&langpair=en|zh-CN', { signal: controller2.signal });
-        clearTimeout(timeout2);
-        if (res2.ok) {
-            var data2 = await res2.json();
-            if (data2 && data2.responseData && data2.responseData.translatedText) {
-                setApiStatus('ok');
+
+    const probes = GOOGLE_CHANNELS.map(client => {
+        const url = buildGoogleUrl('hello', 'zh-CN', client);
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 2000);
+        return fetch(url, { signal: ctrl.signal })
+            .then(res => {
+                clearTimeout(timer);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                const r = (data[0] || []).map(item => item[0]).join('');
+                if (!r) throw new Error('EMPTY');
                 return true;
-            }
-        }
-    } catch (e) {}
-    setApiStatus('fail');
-    return false;
+            });
+    });
+
+    const mmCtrl = new AbortController();
+    const mmTimer = setTimeout(() => mmCtrl.abort(), 2000);
+    const mmProbe = fetch('https://api.mymemory.translated.net/get?q=hello&langpair=en|zh-CN', { signal: mmCtrl.signal })
+        .then(res => {
+            clearTimeout(mmTimer);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        })
+        .then(data => {
+            if (data && data.responseData && data.responseData.translatedText) return true;
+            throw new Error('EMPTY');
+        });
+
+    Promise.any([...probes, mmProbe])
+        .then(() => setApiStatus('ok'))
+        .catch(() => setApiStatus('fail'));
 }
 
 function debounce(fn,delay){let timer=null; return function(...args){clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args),delay);}}
@@ -1585,6 +1630,7 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
     if (attempt >= MAX_RETRIES) {
         resultEl.innerText = '多次尝试后所有翻译通道仍不可用，请稍后重新输入';
         setViaBadge(idx, null);
+        setCardState(idx, 'error');
         if (typeof onDone === 'function') onDone();
         return;
     }
@@ -1599,9 +1645,7 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
         }
         resultEl.innerText = result.translated || '';
         setViaBadge(idx, result.via);
-
-        setCardButtonsVisible(idx, true, true);
-
+        setCardState(idx, 'success');
         if (typeof onDone === 'function') onDone();
     }).catch(function (e) {
         if (e.name === 'AbortError') return;
@@ -1613,10 +1657,8 @@ function doTranslateOne(idx, text, lang, attempt, onDone) {
         else errText = '所有翻译通道暂不可用，正在自动重试（第 ' + (attempt + 1) + ' 次）…';
         resultEl.innerText = errText;
         setViaBadge(idx, null);
+        setCardState(idx, 'error');
 
-        setCardButtonsVisible(idx, false, false);
-
-        // 第一次失败时立刻让按钮恢复，不卡「翻译中…」
         if (typeof onDone === 'function') {
             onDone();
             onDone = null;
@@ -1643,7 +1685,7 @@ const translateText = debounce(async ()=>{
             document.getElementById(id).innerText = '';
             setViaBadge(i, null);
         });
-        hideAllCardButtons();
+        resetAllCards();
         setDetectedLang('');
         lastDetectedLang = '';
         state.detected = null;
@@ -1654,7 +1696,8 @@ const translateText = debounce(async ()=>{
         document.getElementById(id).innerText = '翻译中...';
         setViaBadge(i, null);
     });
-    hideAllCardButtons();
+    cardStates[0] = cardStates[1] = cardStates[2] = 'translating';
+    [0,1,2].forEach(applyCardState);
 
     state.detected = null;
 
@@ -1668,7 +1711,7 @@ document.getElementById('clearInput').addEventListener('click',()=>{
     translateText();
 });
 
-/* 手动点「重新翻译」图标 */
+/* 手动点「重新翻译」 */
 document.querySelectorAll('.translate-btn').forEach(btn=>{
     btn.addEventListener('click', ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -1679,11 +1722,10 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
         if (state.controller) state.controller.abort();
         state.controller = new AbortController();
 
-        // 图标开始旋转
         btn.classList.add('spinning');
         btn.disabled = true;
 
-        setCardButtonsVisible(idx, true, false);
+        cardStates[idx] = 'translating';
 
         const done = () => {
             btn.classList.remove('spinning');
@@ -1694,7 +1736,7 @@ document.querySelectorAll('.translate-btn').forEach(btn=>{
     });
 });
 
-/* 复制图标：点击后变绿一下 */
+/* 复制按钮 */
 document.querySelectorAll('.copy-btn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
         const idx = parseInt(btn.dataset.index);
@@ -1715,18 +1757,26 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
         }
 
         btn.classList.add('copied');
-        setTimeout(() => btn.classList.remove('copied'), 1200);
+        if (copyTimers.has(btn)) clearTimeout(copyTimers.get(btn));
+        const t = setTimeout(() => {
+            btn.classList.remove('copied');
+            copyTimers.delete(btn);
+        }, 1200);
+        copyTimers.set(btn, t);
     });
 });
 
-/* 结果框被用户清空时，自动隐藏该卡的复制按钮 */
+/* 结果框被用户编辑：只在 success 状态下同步复制按钮 */
 [0, 1, 2].forEach(idx => {
     const resultEl = document.getElementById(['result1', 'result2', 'result3'][idx]);
     if (!resultEl) return;
     resultEl.addEventListener('input', () => {
+        if (cardStates[idx] !== 'success') return;
         const txt = resultEl.innerText.trim();
         const els = getCardEls(idx);
-        if (els.copyBtn) els.copyBtn.style.display = txt ? '' : 'none';
+        if (els.copyBtn) {
+            els.copyBtn.style.display = txt ? '' : 'none';
+        }
     });
 });
 
