@@ -504,9 +504,18 @@ textarea {
 }
 .icon-btn.copied {
     color: #2e7d32;
+    background: #e8f5e9;
 }
-.icon-btn.copied:hover { background: #e8f5e9; color: #2e7d32; }
-
+.icon-btn.copied svg {
+    stroke: #2e7d32 !important;
+}
+.icon-btn.copied:hover {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+.icon-btn.copied:hover svg {
+    stroke: #2e7d32 !important;
+}
 .via-badge {
     display: none;
     font-size: 11px;
@@ -1756,10 +1765,13 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
             document.body.removeChild(ta);
         }
 
-        btn.classList.add('copied');
+                btn.classList.add('copied');
+        // 悬浮提示"已复制"
+        btn.title = '已复制';
         if (copyTimers.has(btn)) clearTimeout(copyTimers.get(btn));
         const t = setTimeout(() => {
             btn.classList.remove('copied');
+            btn.title = '复制';
             copyTimers.delete(btn);
         }, 1200);
         copyTimers.set(btn, t);
