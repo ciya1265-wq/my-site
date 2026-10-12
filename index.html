@@ -377,6 +377,7 @@ body {
 .input-wrap textarea {
     flex: 1;
     height: 220px;
+    min-height: 120px;
     padding: 10px 44px 10px 12px;
     font-size: 18px;
     line-height: 1.6;
@@ -1149,6 +1150,8 @@ body {
                         <button onclick="tableInsertCol();closeTableMenu()">右侧插入列</button>
                         <button onclick="tableInsertColLeft();closeTableMenu()">左侧插入列</button>
                         <button onclick="tableDeleteCol();closeTableMenu()">删除当前列</button>
+                        <div class="divider"></div>
+                        <button onclick="transposeCurrentTable();closeTableMenu()">↔ 行列转置</button>
                     </div>
                 </div>
                 <button onclick="insertLink()" title="超链接">🔗</button>
@@ -1160,11 +1163,11 @@ body {
                 <button onclick="cmd('removeFormat')" title="清除所有样式">✕</button>
             </div>
             <div class="toolbar-group">
+                <button onclick="openTextToTable()" title="文本转表格" style="background:#e8f5e9;color:#2e7d32;">📋 文本转表格</button>
                 <button onclick="openFindReplace()" title="查找替换">🔍 查找替换</button>
                 <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
                 <button onclick="toggleWrap()" id="wrapToggleBtn" title="切换表格自动换行">🔁 自动换行</button>
                 <button onclick="toggleVerticalAlign()" id="valignBtn" title="切换表格单元格垂直对齐">⬆ 顶部对齐</button>
-                <button onclick="openTextToTable()" title="文本转表格" style="background:#e8f5e9;color:#2e7d32;">📋 文本转表格</button>
                 <button onclick="openCellFilter()" title="表格筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
             </div>
         </div>
@@ -1233,8 +1236,7 @@ body {
             <button class="btn-primary" onclick="applyCellFilter()">应用筛选</button>
         </div>
     </div>
-</div>
-<script>
+</div><script>
 /* ============================================================
    标签切换
 ============================================================ */
@@ -1340,7 +1342,6 @@ function applyCardState(idx) {
     const els = getCardEls(idx);
     if (!els.translateBtn) return;
 
-    // 非 translating 状态时清掉结果框的"翻译中"样式
     if (els.resultEl && st !== 'translating') {
         els.resultEl.classList.remove('translating');
     }
@@ -1635,7 +1636,6 @@ function setViaBadge(idx, via) {
     }
 }
 
-/* 并发检测 API 状态 */
 function testApi() {
     setApiStatus('testing');
 
@@ -1764,24 +1764,35 @@ const translateText = debounce(async ()=>{
 
 document.getElementById('inputText').addEventListener('input',translateText);
 
-/* ===== 输入框高度记忆（字号固定 14px，由 CSS 控制） ===== */
+/* ===== 输入框高度记忆（字号由 CSS 控制，最小高度 120px 防止被存成过小值） ===== */
 (function initTextareaHeightMemory() {
     const ta = document.getElementById('inputText');
     if (!ta) return;
 
     const KEY_H = 'translateInputHeight';
+    const MIN_H = 120;   // 最小值
+    const DEFAULT_H = 220;
 
     // 页面加载时读取上次保存的高度
     const saved = localStorage.getItem(KEY_H);
     if (saved && !isNaN(parseInt(saved, 10))) {
-        ta.style.height = parseInt(saved, 10) + 'px';
+        let h = parseInt(saved, 10);
+        if (h < MIN_H) h = DEFAULT_H;  // 存过小的值直接忽略，用默认
+        ta.style.height = h + 'px';
     }
 
-    // 高度变化时保存（拖动调整大小时触发）
+    // 高度变化时保存
     let lastH = ta.offsetHeight;
     const onResize = () => {
         const h = ta.offsetHeight;
         if (h === lastH) return;
+        // 防止记录过小的高度
+        if (h < MIN_H) {
+            ta.style.height = DEFAULT_H + 'px';
+            lastH = DEFAULT_H;
+            localStorage.setItem(KEY_H, String(DEFAULT_H));
+            return;
+        }
         lastH = h;
         localStorage.setItem(KEY_H, String(h));
     };
@@ -1859,7 +1870,7 @@ document.querySelectorAll('.copy-btn').forEach(btn=>{
     });
 });
 
-/* 结果框内容被手动编辑：只在 success 状态才同步复制按钮显隐 */
+/* 结果框被手动编辑：只在 success 状态才同步复制按钮 */
 [0, 1, 2].forEach(idx => {
     const resultEl = document.getElementById(['result1', 'result2', 'result3'][idx]);
     if (!resultEl) return;
@@ -2279,7 +2290,8 @@ function insertTable(rows, cols) {
     document.execCommand('insertHTML', false, html);
     updateNoteStatus();
 }
-/* ===== 文本转表格 ===== */
+
+/* ===== 文本转表格（横向：第一行名称，第二行值） ===== */
 function openTextToTable() {
     const input = prompt(
         '把要转换的内容粘贴进来，每行一条，格式：\n\n名称：值\n名称：值\n\n支持的分隔符：中文冒号、英文冒号、等号、Tab',
@@ -2299,7 +2311,8 @@ function insertTextAsTable(raw) {
     const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length === 0) { alert('没有可转换的内容'); return; }
 
-    const rows = [];
+    const keys = [];
+    const vals = [];
     for (const line of lines) {
         let idx = -1;
         let sepLen = 1;
@@ -2312,27 +2325,77 @@ function insertTextAsTable(raw) {
         }
 
         if (idx === -1) {
-            rows.push([line, '']);
+            keys.push(line);
+            vals.push('');
         } else {
-            const key = line.slice(0, idx).trim();
-            const val = line.slice(idx + sepLen).trim();
-            rows.push([key, val]);
+            keys.push(line.slice(0, idx).trim());
+            vals.push(line.slice(idx + sepLen).trim());
         }
     }
 
-    let html = '<table>';
-    html += '<tr><th>名称</th><th>具体说明</th></tr>';
-    for (const [k, v] of rows) {
-        html += '<tr>';
+    // 横向表格：第一行 = 所有名称，第二行 = 所有值
+    let html = '<table><tr>';
+    for (const k of keys) {
         html += '<td>' + esc(k) + '</td>';
-        html += '<td>' + esc(v) + '</td>';
-        html += '</tr>';
     }
-    html += '</table><p><br></p>';
+    html += '</tr><tr>';
+    for (const v of vals) {
+        html += '<td>' + esc(v) + '</td>';
+    }
+    html += '</tr></table><p><br></p>';
 
     document.execCommand('insertHTML', false, html);
     saveCurrent();
 }
+
+/* ===== 行列转置：把当前表格的行列互换 ===== */
+function transposeCurrentTable() {
+    const cell = findCellInEditor();
+    const table = cell ? cell.closest('table') : null;
+    if (!table) {
+        alert('请先把光标放在要转置的表格的单元格里');
+        return;
+    }
+
+    // 用 parseTableGrid 拿到网格（处理合并单元格）
+    const { grid } = parseTableGrid(table);
+    if (grid.length === 0) { alert('表格为空'); return; }
+
+    const rows = grid.length;
+    const cols = grid[0].length;
+    const newGrid = [];
+    for (let c = 0; c < cols; c++) {
+        const newRow = [];
+        for (let r = 0; r < rows; r++) {
+            newRow.push(grid[r][c]);
+        }
+        newGrid.push(newRow);
+    }
+
+    function esc(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    let html = '<table>';
+    for (const row of newGrid) {
+        html += '<tr>';
+        for (const cellText of row) {
+            const textHtml = esc(cellText).replace(/\n/g, '<br>');
+            html += '<td>' + textHtml + '</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</table>';
+
+    // 替换原表格
+    table.outerHTML = html;
+    saveCurrent();
+    noteStatusRight.textContent = '↔ 已转置';
+    noteStatusRight.style.color = '#1976d2';
+}
+
 function insertTableCustom() {
     const rowsInput = document.getElementById('tableRowsInput');
     const colsInput = document.getElementById('tableColsInput');
