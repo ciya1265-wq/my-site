@@ -2279,7 +2279,7 @@ function insertTable(rows, cols) {
     document.execCommand('insertHTML', false, html);
     updateNoteStatus();
 }
-/* ===== 文本转表格 ===== */
+/* ===== 文本转表格（横向：第一行名称，第二行值） ===== */
 function openTextToTable() {
     const input = prompt(
         '把要转换的内容粘贴进来，每行一条，格式：\n\n名称：值\n名称：值\n\n支持的分隔符：中文冒号、英文冒号、等号、Tab',
@@ -2299,7 +2299,8 @@ function insertTextAsTable(raw) {
     const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length === 0) { alert('没有可转换的内容'); return; }
 
-    const rows = [];
+    const keys = [];
+    const vals = [];
     for (const line of lines) {
         let idx = -1;
         let sepLen = 1;
@@ -2312,23 +2313,24 @@ function insertTextAsTable(raw) {
         }
 
         if (idx === -1) {
-            rows.push([line, '']);
+            keys.push(line);
+            vals.push('');
         } else {
-            const key = line.slice(0, idx).trim();
-            const val = line.slice(idx + sepLen).trim();
-            rows.push([key, val]);
+            keys.push(line.slice(0, idx).trim());
+            vals.push(line.slice(idx + sepLen).trim());
         }
     }
 
-    let html = '<table>';
-    html += '<tr><th>名称</th><th>具体说明</th></tr>';
-    for (const [k, v] of rows) {
-        html += '<tr>';
+    // 横向表格：第一行 = 所有名称，第二行 = 所有值
+    let html = '<table><tr>';
+    for (const k of keys) {
         html += '<td>' + esc(k) + '</td>';
-        html += '<td>' + esc(v) + '</td>';
-        html += '</tr>';
     }
-    html += '</table><p><br></p>';
+    html += '</tr><tr>';
+    for (const v of vals) {
+        html += '<td>' + esc(v) + '</td>';
+    }
+    html += '</tr></table><p><br></p>';
 
     document.execCommand('insertHTML', false, html);
     saveCurrent();
