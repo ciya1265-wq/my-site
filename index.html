@@ -1163,7 +1163,8 @@ body {
                 <button onclick="cmd('removeFormat')" title="清除所有样式">✕</button>
             </div>
             <div class="toolbar-group">
-                <button onclick="openTextToTable()" title="文本转表格" style="background:#e8f5e9;color:#2e7d32;">📋 文本转表格</button>
+                <button onclick="openTextToTable()" title="单条：名称行 + 值行" style="background:#e8f5e9;color:#2e7d32;">📋 单条转表格</button>
+                <button onclick="openMultiTextToTable()" title="多条：合并成一个多行表格" style="background:#e8f5e9;color:#2e7d32;">📋 多条转表格</button>
                 <button onclick="openFindReplace()" title="查找替换">🔍 查找替换</button>
                 <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
                 <button onclick="toggleWrap()" id="wrapToggleBtn" title="切换表格自动换行">🔁 自动换行</button>
@@ -1764,29 +1765,26 @@ const translateText = debounce(async ()=>{
 
 document.getElementById('inputText').addEventListener('input',translateText);
 
-/* ===== 输入框高度记忆（字号由 CSS 控制，最小高度 120px 防止被存成过小值） ===== */
+/* ===== 输入框高度记忆（最小值 120px，防止被存成过小值） ===== */
 (function initTextareaHeightMemory() {
     const ta = document.getElementById('inputText');
     if (!ta) return;
 
     const KEY_H = 'translateInputHeight';
-    const MIN_H = 120;   // 最小值
+    const MIN_H = 120;
     const DEFAULT_H = 220;
 
-    // 页面加载时读取上次保存的高度
     const saved = localStorage.getItem(KEY_H);
     if (saved && !isNaN(parseInt(saved, 10))) {
         let h = parseInt(saved, 10);
-        if (h < MIN_H) h = DEFAULT_H;  // 存过小的值直接忽略，用默认
+        if (h < MIN_H) h = DEFAULT_H;
         ta.style.height = h + 'px';
     }
 
-    // 高度变化时保存
     let lastH = ta.offsetHeight;
     const onResize = () => {
         const h = ta.offsetHeight;
         if (h === lastH) return;
-        // 防止记录过小的高度
         if (h < MIN_H) {
             ta.style.height = DEFAULT_H + 'px';
             lastH = DEFAULT_H;
@@ -2291,7 +2289,7 @@ function insertTable(rows, cols) {
     updateNoteStatus();
 }
 
-/* ===== 文本转表格（横向：第一行名称，第二行值） ===== */
+/* ===== 单条文本转表格（横向：第一行名称，第二行值） ===== */
 function openTextToTable() {
     const input = prompt(
         '把要转换的内容粘贴进来，每行一条，格式：\n\n名称：值\n名称：值\n\n支持的分隔符：中文冒号、英文冒号、等号、Tab',
@@ -2333,7 +2331,6 @@ function insertTextAsTable(raw) {
         }
     }
 
-    // 横向表格：第一行 = 所有名称，第二行 = 所有值
     let html = '<table><tr>';
     for (const k of keys) {
         html += '<td>' + esc(k) + '</td>';
@@ -2348,6 +2345,94 @@ function insertTextAsTable(raw) {
     saveCurrent();
 }
 
+/* ===== 多条文本转表格：多组相同字段的数据合并成一个多行表格 ===== */
+function openMultiTextToTable() {
+    const input = prompt(
+        '粘贴多组数据，每组之间用【空行】分隔，每行格式：名称：值\n\n' +
+        '例：\n' +
+        '买家paypal账号：abc@example.com\n' +
+        '品类：canbus cable\n' +
+        '数量：1\n' +
+        '\n' +
+        '买家paypal账号：def@example.com\n' +
+        '品类：TPMS sensors\n' +
+        '数量：1',
+        ''
+    );
+    if (!input) return;
+    insertMultiTextAsTable(input);
+}
+
+function insertMultiTextAsTable(raw) {
+    function esc(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    const groups = raw.split(/\n\s*\n/)
+        .map(g => g.trim())
+        .filter(g => g.length > 0);
+
+    if (groups.length === 0) { alert('没有可转换的内容'); return; }
+
+    function parseGroup(groupText) {
+        const lines = groupText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+        const pairs = [];
+        for (const line of lines) {
+            let idx = -1;
+            let sepLen = 1;
+            for (const sep of ['：', ':', '=', '\t']) {
+                const i = line.indexOf(sep);
+                if (i !== -1 && (idx === -1 || i < idx)) {
+                    idx = i;
+                    sepLen = sep.length;
+                }
+            }
+            if (idx === -1) {
+                pairs.push({ key: line, val: '' });
+            } else {
+                pairs.push({
+                    key: line.slice(0, idx).trim(),
+                    val: line.slice(idx + sepLen).trim()
+                });
+            }
+        }
+        return pairs;
+    }
+
+    const parsedGroups = groups.map(parseGroup);
+    if (parsedGroups.length === 0 || parsedGroups[0].length === 0) {
+        alert('第一组没有可识别的内容');
+        return;
+    }
+
+    const headerKeys = parsedGroups[0].map(p => p.key);
+
+    let html = '<table>';
+    html += '<tr>';
+    for (const k of headerKeys) {
+        html += '<td>' + esc(k) + '</td>';
+    }
+    html += '</tr>';
+
+    for (const pairs of parsedGroups) {
+        const map = {};
+        for (const p of pairs) map[p.key] = p.val;
+
+        html += '<tr>';
+        for (const k of headerKeys) {
+            const v = map[k] !== undefined ? map[k] : '';
+            html += '<td>' + esc(v) + '</td>';
+        }
+        html += '</tr>';
+    }
+
+    html += '</table><p><br></p>';
+    document.execCommand('insertHTML', false, html);
+    saveCurrent();
+}
+
 /* ===== 行列转置：把当前表格的行列互换 ===== */
 function transposeCurrentTable() {
     const cell = findCellInEditor();
@@ -2357,7 +2442,6 @@ function transposeCurrentTable() {
         return;
     }
 
-    // 用 parseTableGrid 拿到网格（处理合并单元格）
     const { grid } = parseTableGrid(table);
     if (grid.length === 0) { alert('表格为空'); return; }
 
@@ -2389,7 +2473,6 @@ function transposeCurrentTable() {
     }
     html += '</table>';
 
-    // 替换原表格
     table.outerHTML = html;
     saveCurrent();
     noteStatusRight.textContent = '↔ 已转置';
