@@ -1164,6 +1164,7 @@ body {
                 <button onclick="exportPDF()" title="导出 PDF">📄 导出 PDF</button>
                 <button onclick="toggleWrap()" id="wrapToggleBtn" title="切换表格自动换行">🔁 自动换行</button>
                 <button onclick="toggleVerticalAlign()" id="valignBtn" title="切换表格单元格垂直对齐">⬆ 顶部对齐</button>
+                <button onclick="openTextToTable()" title="文本转表格" style="background:#e8f5e9;color:#2e7d32;">📋 文本转表格</button>
                 <button onclick="openCellFilter()" title="表格筛选" style="background:#e3f2fd;color:#1976d2;">🔽 筛选</button>
             </div>
         </div>
@@ -2278,7 +2279,60 @@ function insertTable(rows, cols) {
     document.execCommand('insertHTML', false, html);
     updateNoteStatus();
 }
+/* ===== 文本转表格 ===== */
+function openTextToTable() {
+    const input = prompt(
+        '把要转换的内容粘贴进来，每行一条，格式：\n\n名称：值\n名称：值\n\n支持的分隔符：中文冒号、英文冒号、等号、Tab',
+        ''
+    );
+    if (!input) return;
+    insertTextAsTable(input);
+}
 
+function insertTextAsTable(raw) {
+    function esc(str) {
+        return String(str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) { alert('没有可转换的内容'); return; }
+
+    const rows = [];
+    for (const line of lines) {
+        let idx = -1;
+        let sepLen = 1;
+        for (const sep of ['：', ':', '=', '\t']) {
+            const i = line.indexOf(sep);
+            if (i !== -1 && (idx === -1 || i < idx)) {
+                idx = i;
+                sepLen = sep.length;
+            }
+        }
+
+        if (idx === -1) {
+            rows.push([line, '']);
+        } else {
+            const key = line.slice(0, idx).trim();
+            const val = line.slice(idx + sepLen).trim();
+            rows.push([key, val]);
+        }
+    }
+
+    let html = '<table>';
+    html += '<tr><th>名称</th><th>具体说明</th></tr>';
+    for (const [k, v] of rows) {
+        html += '<tr>';
+        html += '<td>' + esc(k) + '</td>';
+        html += '<td>' + esc(v) + '</td>';
+        html += '</tr>';
+    }
+    html += '</table><p><br></p>';
+
+    document.execCommand('insertHTML', false, html);
+    saveCurrent();
+}
 function insertTableCustom() {
     const rowsInput = document.getElementById('tableRowsInput');
     const colsInput = document.getElementById('tableColsInput');
