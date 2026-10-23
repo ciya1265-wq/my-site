@@ -1765,45 +1765,6 @@ const translateText = debounce(async ()=>{
 
 document.getElementById('inputText').addEventListener('input',translateText);
 
-/* ===== 输入框高度记忆（最小值 120px，防止被存成过小值） ===== */
-(function initTextareaHeightMemory() {
-    const ta = document.getElementById('inputText');
-    if (!ta) return;
-
-    const KEY_H = 'translateInputHeight';
-    const MIN_H = 120;
-    const DEFAULT_H = 220;
-
-    const saved = localStorage.getItem(KEY_H);
-    if (saved && !isNaN(parseInt(saved, 10))) {
-        let h = parseInt(saved, 10);
-        if (h < MIN_H) h = DEFAULT_H;
-        ta.style.height = h + 'px';
-    }
-
-    let lastH = ta.offsetHeight;
-    const onResize = () => {
-        const h = ta.offsetHeight;
-        if (h === lastH) return;
-        if (h < MIN_H) {
-            ta.style.height = DEFAULT_H + 'px';
-            lastH = DEFAULT_H;
-            localStorage.setItem(KEY_H, String(DEFAULT_H));
-            return;
-        }
-        lastH = h;
-        localStorage.setItem(KEY_H, String(h));
-    };
-
-    if (window.ResizeObserver) {
-        const ro = new ResizeObserver(onResize);
-        ro.observe(ta);
-    } else {
-        ta.addEventListener('mouseup', onResize);
-        window.addEventListener('mouseup', onResize);
-    }
-})();
-
 document.getElementById('clearInput').addEventListener('click',()=>{
     document.getElementById('inputText').value='';
     translateText();
