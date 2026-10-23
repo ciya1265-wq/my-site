@@ -6,9 +6,11 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%239c27b0'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>工</text></svg>">
 <style>
 * { box-sizing: border-box; }
-body {
+html, body {
     margin: 0;
     padding: 0;
+    height: 100vh;
+    overflow: hidden; /* 锁死整个网页，绝对不出现全局滚动条 */
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     background: #f0f2f5;
     color: #333;
@@ -49,12 +51,11 @@ body {
 .tab-btn[data-tab="tab-note"]:not(.active) { background: #f3e5f5; color: #6a1b9a; }
 
 .tab-panel { display: none; }
-.tab-panel.active {
-    display: block;
-    height: calc(100vh - 58px); /* 减去顶部标签栏的高度 */
-    overflow-y: auto;           /* 让每个面板内部自己滚动 */
+.tab-panel.active { 
+    display: block; 
+    height: calc(100vh - 58px); /* 减去顶部标签栏 */
+    overflow-y: auto;           /* 内容超长时，滚动条出在面板内部 */
 }
-
 .panel-container {
     max-width: 960px;
     margin: 0 auto;
