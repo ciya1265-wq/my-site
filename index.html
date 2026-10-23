@@ -12,8 +12,6 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     background: #f0f2f5;
     color: #333;
-    height: 100vh;
-    overflow: hidden;
 }
 
 #tabBar {
@@ -51,7 +49,11 @@ body {
 .tab-btn[data-tab="tab-note"]:not(.active) { background: #f3e5f5; color: #6a1b9a; }
 
 .tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel.active {
+    display: block;
+    height: calc(100vh - 58px); /* 减去顶部标签栏的高度 */
+    overflow-y: auto;           /* 让每个面板内部自己滚动 */
+}
 
 .panel-container {
     max-width: 960px;
